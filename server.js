@@ -1,6 +1,6 @@
 
 var { startWorkers, getWorkersList, getWorkerData } = require('./pm-control.js');
-var { app_ecosystem, app_workers } = require('./platform.js');
+var { app_workers_config, app_workers_name } = require('./platform.js');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -21,7 +21,7 @@ app.post("/start-workers", (req, res, next) => {
     let app_name = req.body.app_name;
 
     let result = {};
-    result.success = startWorkers(app_ecosystem(app_name));
+    result.success = startWorkers(app_workers_config(app_name));
     
     res.json(result);
 });
@@ -34,10 +34,9 @@ app.get("/describe-worker", (req, res, next) => {
     );
 });
 
-app.get("/describe-workers/app", (req, res, next) => {
-    
+app.get("/describe-workers/app/:app_name", (req, res, next) => {
     getWorkerData(
-        req.query.app,
+        req.params.app_name,
         (data) => res.json(data),
         (err) => res.json({message: "worker does not exist"})
     );

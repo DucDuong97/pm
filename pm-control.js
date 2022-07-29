@@ -1,7 +1,7 @@
 const pm2 = require('pm2');
 const fs = require('fs');
 
-exports.startWorkers = (apps, num) => {
+exports.startWorkers = (configs, num) => {
     if (!fs.existsSync(`./workers/${service_name}.php`)) {
         return false;
     }
@@ -14,7 +14,7 @@ exports.startWorkers = (apps, num) => {
             process.exit(2);
         }
     
-        pm2.start(apps, function(err, apps){
+        pm2.start(configs, function(err, apps){
             if (err) {
                 console.error(`start error: ${err}`);
             }
@@ -39,23 +39,6 @@ exports.getWorkersList = (cb) => {
 };
 
 exports.getWorkerData = (worker_name, cb, err_cb) => {
-    pm2.connect(function(err){
-        if (err) {
-            console.error(`connection error: ${err}`);
-            process.exit(2);
-        }
-    
-        pm2.describe(worker_name, (err, worker) => {
-            if (err){
-                err_cb(err);
-            }
-            console.log(worker);
-            cb(worker);
-        });
-    });
-};
-
-exports.getAppWorkersData = (app, cb, err_cb) => {
     pm2.connect(function(err){
         if (err) {
             console.error(`connection error: ${err}`);
