@@ -1,13 +1,6 @@
 const pm2 = require('pm2');
-const fs = require('fs');
 
-exports.startWorkers = (configs, num) => {
-    if (!fs.existsSync(`./workers/${service_name}.php`)) {
-        return false;
-    }
-    if (!Number.isInteger(num)){
-        return false;
-    }
+exports.startWorkers = (configs, errback) => {
     pm2.connect(function(err){
         if (err) {
             console.error(`connection error: ${err}`);
@@ -18,14 +11,13 @@ exports.startWorkers = (configs, num) => {
             if (err) {
                 console.error(`start error: ${err}`);
             }
-            console.log(`create ${num} instances of service ${service_name}`);
+            errback(err, apps);
             pm2.disconnect();
         });
     });
-    return true;
 };
 
-exports.getWorkersList = (cb) => {
+exports.getWorkersList = (errback) => {
     pm2.connect(function(err){
         if (err) {
             console.error(`connection error: ${err}`);
@@ -33,12 +25,13 @@ exports.getWorkersList = (cb) => {
         }
     
         pm2.list((err, list) => {
-            cb(list);
+            errback(err, list);
+            pm2.disconnect();
         });
     });
 };
 
-exports.getWorkerData = (worker_name, cb, err_cb) => {
+exports.getWorkerData = (worker_name, errback) => {
     pm2.connect(function(err){
         if (err) {
             console.error(`connection error: ${err}`);
@@ -46,11 +39,8 @@ exports.getWorkerData = (worker_name, cb, err_cb) => {
         }
     
         pm2.describe(worker_name, (err, worker) => {
-            if (err){
-                err_cb(err);
-            }
-            console.log(worker);
-            cb(worker);
+            errback(err, worker);
+            pm2.disconnect();
         });
     });
 };
