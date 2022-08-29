@@ -1,29 +1,26 @@
 
-var { startWorkers, getWorkersList, getWorkerData } = require('./pm-control.js');
-var { app_worker_config, app_workers_config } = require('./platform.js');
+const { startWorkers, stopWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
+const { app_worker_config, app_workers_config } = require('./platform.js');
 
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config({path:__dirname+`/.env`});
 
-var express = require("express");
+const app = require("express")();
 
-var app = express();
-
-app.listen(process.env.PORT, () => {
-    console.log("Server running on port 3000");
-});
+app.use(require("body-parser").urlencoded({ extended: false }));
 
 app.get("/url", (req, res, next) => {
     res.json(["Tony","Lisa","Michael","Ginger","Food"]);
 });
 
 app.post("/start-worker", (req, res, next) => {
-    let app_name = req.query.app_name;
-    let worker_name = req.query.app_name;
+    console.log(req.body);
+    let app_name = req.body.app_name;
+    let worker_name = req.body.worker_name;
+    let amount = req.body.amount;
 
     let result = {};
 
-    startWorkers(app_worker_config(app_name, worker_name), (err, apps) => {
+    startWorkers(app_worker_config(app_name, worker_name, amount), (err, apps) => {
         if (err) {
             result.success = false;
             result.err_msg = err;
@@ -34,24 +31,22 @@ app.post("/start-worker", (req, res, next) => {
 
         res.json(result);
     });
-    
 });
 
-app.post("/start-workers/app/:app_name", (req, res, next) => {
-    let app_name = req.params.app_name;
+app.post("/stop-worker", (req, res, next) => {
+    let app_name = req.query.app_name;
+    let worker_name = req.query.worker_name;
 
     let result = {};
-    result.success = startWorkers(app_workers_config(app_name), (err, apps) => {
+
+    stopWorker(app_name + '.' + worker_name, (err, apps) => {
         if (err) {
             result.success = false;
             result.err_msg = err;
         } else {
             result.success = true;
-            result.apps = apps.map(app => ({
-                name: app.pm2_env.name
-            }));
+            result.apps = apps;
         }
-
         res.json(result);
     });
 });
@@ -66,22 +61,18 @@ app.get("/describe-worker/:worker_name", (req, res, next) => {
         } else {
             result.found = true;
             result.amount = worker.length;
-            // result.worker = worker;
+            result.worker = worker;
         }
 
         res.json(result);
     });
 });
 
-// app.get("/describe-workers/app/:app_name", (req, res, next) => {
-//     getWorkerData(
-//         req.params.app_name,
-//         (data) => res.json(data),
-//         (err) => res.json({message: "worker does not exist"})
-//     );
-// });
-
 app.get("/list", (req, res, next) => {
     getWorkersList((err,list) => res.json(list));
 });
 
+
+app.listen(process.env.PORT, () => {
+    console.log("Server running on port 3000");
+});

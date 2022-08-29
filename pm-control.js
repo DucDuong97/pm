@@ -17,6 +17,23 @@ exports.startWorkers = (configs, errback) => {
     });
 };
 
+exports.stopWorker = (name, errback) => {
+    pm2.connect(function(err){
+        if (err) {
+            console.error(`connection error: ${err}`);
+            process.exit(2);
+        }
+    
+        pm2.stop(name, function(err, apps){
+            if (err) {
+                console.error(`start error: ${err}`);
+            }
+            errback(err, apps);
+            pm2.disconnect();
+        });
+    });
+};
+
 exports.getWorkersList = (errback) => {
     pm2.connect(function(err){
         if (err) {

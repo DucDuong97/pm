@@ -1,28 +1,17 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
-const fs = require('fs');
+exports.app_worker_config = (app_name, worker_name, amount) => {
 
-const workers = JSON.parse(fs.readFileSync(process.env.SUCCESS_ROOT+'/workers.json'));
-console.log('reading worker config at:', process.env.SUCCESS_ROOT+'/workers.json');
-console.log('worker config:', workers);
-
-exports.app_worker_config = (app_name, worker_name) => {
-    app_workers = workers.apps[app_name];
-    if (app_workers === undefined) {
-        return [];
-    }
-    return app_workers
-        .filter(config => {
-            return config.name == worker_name;
-        })
-        .map(config => ({
-            name: `${app_name}.${config.name}`,
-            namespace: app_name,
-            script: `${process.env.SUCCESS_ROOT}/${app_name}/platform/${config.type}/${config.name}.php`,
-            interpreter: "php",
-            instances: config.amount
-        }));
+    return {
+        name: `${app_name}.${worker_name}`,
+        namespace: app_name,
+        script: `workers/queue.worker.php`,
+        interpreter: "php",
+        args: `--app ${app_name} --worker ${worker_name}`,
+        instances: amount,
+        //TODO max_memory_restart: '300M'   -- to be considered,
+    };
 };
 
 exports.app_workers_config = (app_name) => {
