@@ -4,7 +4,7 @@
 	 * @desc Installing work queue
 	 */
 
-	$dir = 'C:/xampp/htdocs/trueroot/success'; // SUCCESS DIR ~ C:/xampp/htdocs/success
+	$dir = '/home/trueroot/success'; // SUCCESS DIR ~ C:/xampp/htdocs/success
 	require_once dirname($dir)."/true/ap/webroot/service.php";
 	
 	$longopts = array("app:", "worker:", "nosql");
