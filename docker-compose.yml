@@ -1,9 +1,35 @@
 version: '3'
 
 services:
+  rabbitmq:
+    image: rabbitmq:3.10-management
+    container_name: 'rabbitmq'
+    volumes:
+        - ./rabbitmq/data/:/var/lib/rabbitmq/mnesia
+        - ./rabbitmq/log/:/var/log/rabbitmq
+        # - ./rabbitmq:/var/lib/rabbitmq/mnesia
+    ports:
+        - 5673:5672
+        - 15673:15672
+    networks:
+        - rabbitmq_nodejs
+
   service-management:
     build: .
+    container_name: 'service-management'
     volumes:
       - C:/xampp/htdocs/trueroot:/home/trueroot
+      - C:/xampp/htdocs/lamp/queue:/home/node/worker-mngt
+    depends_on:
+      - "rabbitmq"
+    environment:
+      SUCCESS_ROOT: /home/trueroot/success
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672
     ports:
       - 3000:3000
+    networks:
+      - rabbitmq_nodejs
+
+networks:
+  rabbitmq_nodejs:
+    driver: bridge
