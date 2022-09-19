@@ -63,10 +63,11 @@ initChannel((channel) => {
 		running = true;
 		const child = spawn(
 			'php', [
-				process.env.SUCCESS_ROOT+'/bin/work.resolve.php', 
+				process.env.SUCCESS_ROOT+'/bin/work.resolve.php',
 				'--app', app,
 				'--worker', worker,
 				'--msg', msg.content.toString(),
+				'--nosql'
 			],
 		);
 

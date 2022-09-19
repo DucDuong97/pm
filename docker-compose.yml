@@ -7,19 +7,18 @@ services:
     volumes:
         - ./rabbitmq/data/:/var/lib/rabbitmq/mnesia
         - ./rabbitmq/log/:/var/log/rabbitmq
-        # - ./rabbitmq:/var/lib/rabbitmq/mnesia
     ports:
         - 5673:5672
         - 15673:15672
     networks:
         - rabbitmq_nodejs
 
-  service-management:
+  worker-management:
     build: .
-    container_name: 'service-management'
+    container_name: 'worker-management'
     volumes:
       - C:/xampp/htdocs/trueroot:/home/trueroot
-      - C:/xampp/htdocs/lamp/queue:/home/node/worker-mngt
+      - .:/home/node/worker-mngt
     depends_on:
       - "rabbitmq"
     environment:
