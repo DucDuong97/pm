@@ -63,7 +63,7 @@ RUN apt-get update && apt-get install -y nodejs npm
 # Create and move to workdir
 WORKDIR /home/node/worker-mngt
 
-ADD ./package.json .
+COPY . .
 
 # Install environment
 RUN npm install pm2 -g && npm install
