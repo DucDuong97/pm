@@ -17,8 +17,8 @@ services:
     build: .
     container_name: 'worker-management'
     volumes:
-      - C:/xampp/htdocs/trueroot:/home/trueroot
-      - .:/home/node/worker-mngt
+      - /home/trueroot:/home/trueroot
+        #- .:/home/node/worker-mngt
     depends_on:
       - "rabbitmq"
     environment:
