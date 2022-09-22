@@ -19,11 +19,13 @@ services:
     volumes:
       - C:/xampp/htdocs/trueroot:/home/trueroot
       - .:/home/node/worker-mngt
+      - ./cert::/home/node/worker-mngt/cert
     depends_on:
       - "rabbitmq"
     environment:
       SUCCESS_ROOT: /home/trueroot/success
       AMQP_URL: amqp://guest:guest@rabbitmq:5672
+      HTTP_URL:
     ports:
       - 3000:3000
     networks:

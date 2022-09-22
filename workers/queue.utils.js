@@ -37,7 +37,7 @@ exports.initDLX = (channel) => {
 				options = {durable: true, autoDelete: false},
 				function (error3, q) {
 					if (error3) throw error3;
-					channel.bindQueue(q.queue, ex.exchange, 'asd');
+					channel.bindQueue(q.queue, ex.exchange, 'retry.fixed.delay');
 				}
 			);
 		}
@@ -45,6 +45,6 @@ exports.initDLX = (channel) => {
 
 	return {
 		'x-dead-letter-exchange': 'dead.letter.exchange',
-		'x-dead-letter-routing-key': 'asd'
+		'x-dead-letter-routing-key': 'retry.fixed.delay'
 	};
 }

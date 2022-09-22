@@ -18,12 +18,13 @@ app.post("/start-worker", (req, res) => {
 	let worker   = req.body.worker_name;
 	let amount   = req.body.amount;
 	let type     = req.body.type;
+	let mode     = req.body.mode;
 
 	console.log(type);
 
 	let result = {};
 
-	startWorkers(app_worker_config(app_name, worker, amount, type), (err, apps) => {
+	startWorkers(app_worker_config(app_name, worker, amount, type, mode), (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;

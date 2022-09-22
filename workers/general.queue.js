@@ -6,7 +6,7 @@ require('dotenv').config({path:require("path").dirname(__dirname)+`/.env`});
 // process.exit();
 
 const { spawn } = require('child_process');
-const { writeLog } = require('./helper');
+const { writeLog } = require('./log.utils');
 
 console.log('~');
 console.log('Deploying general queue...');

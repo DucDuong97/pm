@@ -2,11 +2,14 @@
 
 require('dotenv').config({path:require("path").dirname(__dirname)+`/.env`});
 
+
 const { spawn } = require('child_process');
 const { writeLog } = require('./log.utils');
 
-console.log('~~~');
-console.log('Deploying work queue...');
+console.log('~~');
+console.log('Deploying work queue http...');
+console.log(process.env.SUCCESS_ROOT);
+console.log(process.env.HTTP_URL);
 
 /**
  * Handle input arguments
@@ -57,51 +60,29 @@ initChannel((channel) => {
 	channel.consume(queue, function(msg){
 
 		console.log('~');
-		console.log(" [x] Received %s", msg.content.toString());
+		console.log("[x] Received %s", msg.content.toString());
 
 		running = true;
-		const child = spawn(
-			'php', [
-				process.env.SUCCESS_ROOT+'/bin/work.resolve.php',
-				'--app', app,
-				'--worker', worker,
-				'--msg', msg.content.toString(),
-				'--nosql'
-			],
-		);
-
-		child.stdout.on('data', (data) => {
-			console.log(`child stdout: ${data}`);
-			writeLog(data, queue);
-		});
-
-		child.stderr.on('data', (data) => {
-			console.log(`child stderr: ${data}`);
-			writeLog(data, queue);
-		});
-
-		child.on('exit', function (code, signal) {
-			console.log('Exit: child process exited with ' +
-					`code ${code} and signal ${signal}`);
+		require('./http.utils').send(app, worker, msg.content.toString(), function(code){
 			
-			// if exit code == 0 (means script ends without errors) ack
-			if (code == 0){
+			console.log(`Message: ${code.message}`);
+			writeLog('Message:'+code.message, queue);
+			console.log(`Output: ${code.data}`);
+			writeLog('Output:'+code.data, queue);
+			
+			if (code == 1){
 				console.log("[x] Done");
 				channel.ack(msg);
 			}
-
-			// if exit code != 0 (means script ends due to PHP uncaught errors) to DLX
-			if (code != 0){
+			if (code != 1){
 				console.log("[x] Execution fail");
 				channel.nack(msg, false, false);
 			}
-
-			// if exit code == NULL (means that process is killed) requeue
-			if (code == null){
-				console.log("[x] Child process dies");
-				channel.nack(msg);
-			}
-		
+			running = false;
+		}, function(err){
+			writeLog(err, queue);
+			console.log("[x] Connection error");
+			channel.ack(msg);
 			running = false;
 		});
 	}, {

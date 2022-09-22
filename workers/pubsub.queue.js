@@ -3,7 +3,7 @@
 require('dotenv').config({path:require("path").basename(__dirname)+`/.env`});
 
 const { spawn } = require('child_process');
-const { writeLog } = require('./helper');
+const { writeLog } = require('./log.utils');
 
 console.log('~');
 console.log('Deploying pubsub queue...');
@@ -14,9 +14,9 @@ console.log('Deploying pubsub queue...');
 var args = process.argv.slice(2);
 
 const app = args[0];
-const worker = args[1];
+const event = args[1];
 
-const queue = `${app}.${worker}`;
+const topic = `${app}.${event}`;
 
 /**
  * Define queue
@@ -28,7 +28,7 @@ initChannel((channel) => {
 	const dl_args = initDLX(channel);
 		
 	channel.assertExchange(
-		queue,
+		topic,
 		'fanout',
 		{durable: false}
 	);
@@ -43,10 +43,10 @@ initChannel((channel) => {
 
 		console.log('pubsub:', q.queue);
 
-		channel.bindQueue(q.queue, queue, '');
+		channel.bindQueue(q.queue, topic, '');
 
 		channel.prefetch(1);
-		console.log("[*] Waiting for messages in %s. To exit press CTRL+C", queue);
+		console.log("[*] Waiting for messages in %s. To exit press CTRL+C", topic);
 		
 		channel.consume(q.queue, function(msg){
 
@@ -64,7 +64,7 @@ initChannel((channel) => {
 
 			child.stdout.on('data', (data) => {
 				console.log(`child stdout: ${data}`);
-				writeLog(data, queue);
+				writeLog(data, topic);
 			});
 
 			child.on('exit', function (code, signal) {
@@ -100,7 +100,7 @@ initChannel((channel) => {
 
 process.on('message', function(msg) {
 	if (msg == 'shutdown') {
-		writeLog('Finished closing connections', queue);
+		writeLog('Finished closing connections', topic);
 		setTimeout(function() {
 			process.exit(0);
 		})
