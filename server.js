@@ -9,7 +9,7 @@ const app = require("express")();
 app.use(require("body-parser").urlencoded({ extended: false }));
 
 app.get("/url", (req, res) => {
-	res.json(["Tony","Lisa","Michael","Ginger","Food"]);
+	res.json(["support http"]);
 });
 
 app.post("/start-worker", (req, res) => {
