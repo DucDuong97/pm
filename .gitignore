@@ -3,4 +3,3 @@ test/
 logs/
 rabbitmq/
 package-lock.json
-cert/

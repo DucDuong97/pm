@@ -1,5 +1,5 @@
 
-const { startWorkers, restartWorkers, stopWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
+const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
 const { app_worker_config } = require('./platform.js');
 
 require('dotenv').config({path:__dirname+`/.env`});
@@ -65,6 +65,25 @@ app.post("/stop-worker", (req, res) => {
 	let result = {};
 
 	stopWorker(app_name + '.' + worker, (err, apps) => {
+		if (err) {
+			result.success = false;
+			result.err_msg = err;
+		} else {
+			result.success = true;
+			result.apps = apps;
+		}
+		res.json(result);
+	});
+});
+
+app.post("/delete-worker", (req, res) => {
+
+	let app_name = req.query.app_name;
+	let worker   = req.query.worker_name;
+
+	let result = {};
+
+	deleteWorker(app_name + '.' + worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;

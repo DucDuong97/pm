@@ -49,6 +49,7 @@ initChannel((channel) => {
 
 	channel.assertQueue(queue, {
 		durable: true,
+		autoDelete: true,
 		arguments: {
 			...dl_args,
 		}

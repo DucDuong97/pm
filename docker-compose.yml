@@ -19,12 +19,12 @@ services:
     volumes:
       - /home/trueroot:/home/trueroot
       - .:/home/node/worker-mngt
-      - ./cert::/home/node/worker-mngt/cert
     depends_on:
       - "rabbitmq"
     environment:
       SUCCESS_ROOT: /home/trueroot/success
       AMQP_URL: amqp://admin:<passwd>@10.240.206.2:5672
+      HTTP_URL: https://true.success.tech
     ports:
       - 3000:3000
     networks:
