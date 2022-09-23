@@ -21,7 +21,7 @@ exports.initChannel = (callback) => {
 	});
 }
 
-exports.initDLX = (channel) => {
+const initDLX = (channel) => {
     
 	channel.assertExchange(
 		'dead.letter.exchange',
@@ -47,4 +47,17 @@ exports.initDLX = (channel) => {
 		'x-dead-letter-exchange': 'dead.letter.exchange',
 		'x-dead-letter-routing-key': 'retry.fixed.delay'
 	};
+}
+
+exports.initQueue = (channel, queue) => {
+	let dl_args = initDLX(channel);
+
+	channel.assertQueue(queue, {
+		durable: true,
+		autoDelete: true,
+		arguments: {
+			...dl_args,
+		}
+	});
+	channel.prefetch(1);
 }

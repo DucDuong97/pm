@@ -6,20 +6,19 @@ exports.app_worker_config = (app_name, worker_name, amount, type, mode) => {
     if (type == 'pubsub'){
         var script = 'pubsub';
     } else {
-        var script = 'work';
+        var script = 'queue';
     }
 
-    var mode_ext = '';
+    var mode_ext = 'basic';
 
     if (mode == 'http'){
-        mode_ext = '.http'
+        mode_ext = 'http'
     }
 
-    console.log(script);
     return {
         name: `${app_name}.${worker_name}`,
         namespace: app_name,
-        script: `workers/${script}.queue${mode_ext}.js`,
+        script: `workers/${mode_ext}/${script}.worker.js`,
         args: `${app_name} ${worker_name}`,
         instances: amount,
         shutdown_with_message: true,

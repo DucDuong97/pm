@@ -6,7 +6,11 @@ const path = require("path");
  * @desc Write data to log
  */
 exports.writeLog = (log, queue) => {
-	let logs_dir = `${path.dirname(__dirname)}/logs/${queue}.log`;
+	let log_dir = `${path.dirname(__dirname)}/logs`;
+	if (!fs.existsSync(log_dir)){
+		fs.mkdirSync(log_dir);
+	}
+	let logs_dir = `${log_dir}/${queue}.log`;
 	let datetime = new Date().toLocaleString('en-US', {
 			timeZone: 'Asia/Bangkok'
 	});

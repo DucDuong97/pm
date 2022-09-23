@@ -3,7 +3,7 @@
 require('dotenv').config({path:require("path").basename(__dirname)+`/.env`});
 
 const { spawn } = require('child_process');
-const { writeLog } = require('./log.utils');
+const { writeLog } = require('../utils/log.utils');
 
 console.log('~');
 console.log('Deploying pubsub queue...');
@@ -15,13 +15,14 @@ var args = process.argv.slice(2);
 
 const app = args[0];
 const event = args[1];
+const worker = args[2];
 
 const topic = `${app}.${event}`;
 
 /**
  * Define queue
  */
-const { initChannel, initDLX } = require('./queue.utils');
+const { initChannel, initDLX } = require('../utils/queue.utils');
 
 initChannel((channel) => {
 
