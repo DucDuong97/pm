@@ -63,13 +63,12 @@ RUN apt-get update && apt-get install -y nodejs npm
 # Create and move to workdir
 WORKDIR /home/node/worker-mngt
 
+COPY ./package.json ./
+
+RUN npm install && mkdir logs
+
 COPY . .
 
-# Install environment
-RUN npm install pm2 -g && npm install
-
-# Expose ports needed
 EXPOSE 3000
 
-# Start application
 CMD ["node", "server.js"]
