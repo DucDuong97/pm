@@ -4,9 +4,6 @@ const { app_worker_config } = require('./platform.js');
 
 require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
-console.log(process.env.HTTP_URL);
-process.exit();
-
 const app = require("express")();
 
 app.use(require("body-parser").urlencoded({ extended: false }));
