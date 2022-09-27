@@ -65,7 +65,9 @@ WORKDIR /home/node/worker-mngt
 
 COPY ./package.json ./
 
-RUN npm install && npm install pm2 -g  && mkdir logs
+RUN npm install && mkdir logs
+
+RUN npm install pm2 -g
 
 COPY . .
 
