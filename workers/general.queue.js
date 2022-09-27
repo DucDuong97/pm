@@ -1,6 +1,6 @@
 
 
-require('dotenv').config({path:require("path").dirname(__dirname)+`/.env`});
+require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
 // console.log(process.env.SUCCESS_ROOT+'/bin/work.resolve.php');
 // process.exit();
