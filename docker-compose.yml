@@ -15,7 +15,6 @@ services:
 
   worker-management:
     build: .
-    container_name: 'worker-management'
     volumes:
       - /home/trueroot:/home/trueroot
       - .:/home/node/worker-mngt
