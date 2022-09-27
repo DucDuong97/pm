@@ -1,6 +1,6 @@
 
 
-require('dotenv').config({path:require("path").dirname(__dirname)+`/.env`});
+require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
 const { spawn } = require('child_process');
 const { writeLog } = require('../../log');

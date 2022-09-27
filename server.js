@@ -2,7 +2,10 @@
 const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
 const { app_worker_config } = require('./platform.js');
 
-require('dotenv').config({path:__dirname+`/.env`});
+require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
+
+console.log(process.env.HTTP_URL);
+process.exit();
 
 const app = require("express")();
 
