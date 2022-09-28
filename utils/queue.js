@@ -77,10 +77,10 @@ exports.initQueue = (channel, queue) => {
 
 /**
  * 
- * @param {amqp.Channel} channel 
+ * @param {asyncAmqp.Channel} channel 
  * @return {Object} exchange & queue for pubsub trial
  */
-exports.initRetryEx = async channel => {
+exports.initPubsubRetryEx = async channel => {
 	try {
 		const dead_letter_queue = await channel.assertQueue('dead.letter.queue', {durable: false});
 
@@ -103,4 +103,42 @@ exports.initRetryEx = async channel => {
 	} catch (err){
 		throw err;
 	}
+}
+
+
+/**
+ * 
+ * @param {asyncAmqp.Channel} channel 
+ */
+exports.initRetryEx = async (channel, queue) => {
+	try {
+		const retry_ex = await channel.assertExchange('retry.exchange', 'direct', {
+			durable: true,
+			autoDelete: false
+		});
+		const dead_queue = await channel.assertQueue('dead.letter.queue', {
+			durable: true,
+			autoDelete: false
+		});
+		const retry_q = await channel.assertQueue('retry.queue', {
+			durable: true, autoDelete: false,
+			arguments: {
+				'x-dead-letter-exchange': 'entry.exchange',
+				'x-dead-letter-routing-key': queue.queue
+			}
+		});
+
+		// bind
+		channel.bindQueue(dead_queue.queue, retry_ex.exchange, 'retry.fail');
+
+		return {
+			retry_ex,
+			dead_queue,
+			retry_q
+		}
+
+	} catch (err){
+		throw err;
+	}
+	
 }

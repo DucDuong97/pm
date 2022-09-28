@@ -23,7 +23,7 @@ const topic = `${app}.${event}`;
 /**
  * Define queue
  */
-const { initAsyncChannel, initChannel, initRetryEx } = require('../../utils/queue');
+const { initAsyncChannel, initChannel, initPubsubRetryEx } = require('../../utils/queue');
 
 initAsyncChannel(async (channel) => {
 
@@ -33,7 +33,7 @@ initAsyncChannel(async (channel) => {
 		{durable: false}
 	);
 
-	const {retry_ex, retry_q, resend_ex} = await initRetryEx(channel);
+	const {retry_ex, retry_q, resend_ex} = await initPubsubRetryEx(channel);
 
 	const q = await channel.assertQueue('', {
 		durable: true, exclusive: true
@@ -91,7 +91,7 @@ initAsyncChannel(async (channel) => {
 			if (code != 0){
 				console.log(` [x] Rejecting message!`);
 
-				// should ack, not nack
+				// should ack
 				channel.ack(msg);
 				
 				const retry_delay = ++retry_count * msg.properties.headers['basic-retry-delay'];
