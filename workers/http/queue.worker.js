@@ -8,8 +8,7 @@ const http = require('../../utils/http');
 
 console.log('~~');
 console.log('Deploying work queue http...');
-console.log(process.env.SUCCESS_ROOT);
-console.log(process.env.HTTP_URL);
+console.log(`Target HTTP URL: ${process.env.HTTP_URL}`);
 
 /**
  * Handle input arguments
@@ -60,11 +59,11 @@ initChannel((channel) => {
 			console.log(`Output: ${code.data}`);
 			writeLog('Output:'+code.data, queue);
 			
-			if (code == 1){
+			if (code && code.code == 1){
 				console.log("[x] Done");
 				channel.ack(msg);
 			}
-			if (code != 1){
+			if (!code || code.code != 1){
 				console.log("[x] Execution fail");
 				channel.nack(msg, false, false);
 			}

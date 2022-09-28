@@ -1,5 +1,5 @@
 
-require('dotenv').config({path:require("path").dirname(__dirname)+`/.env`});
+require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
 const amqp = require('amqplib/callback_api');
 

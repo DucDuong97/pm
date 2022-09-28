@@ -8,6 +8,7 @@ const { initChannel, initQueue } = require('../../queue');
 
 console.log('~~');
 console.log('Deploying work queue...');
+console.log(`Success root: ${process.env.SUCCESS_ROOT}`);
 
 /**
  * Handle input arguments
