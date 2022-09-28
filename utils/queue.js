@@ -2,6 +2,7 @@
 require('dotenv').config({path:require("path").dirname(__dirname)+`/.env`});
 
 const amqp = require('amqplib/callback_api');
+const asyncAmqp = require('amqplib');
 
 exports.initChannel = (callback) => {	
 
@@ -19,6 +20,18 @@ exports.initChannel = (callback) => {
 
 		});
 	});
+}
+
+
+exports.initAsyncChannel = async (cb) => {
+	try {
+		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
+		const channel = await conn.createChannel();
+	
+		cb(channel);
+	} catch (err){
+		throw err;
+	}
 }
 
 const initDLX = (channel) => {
@@ -60,4 +73,34 @@ exports.initQueue = (channel, queue) => {
 		}
 	});
 	channel.prefetch(1);
+}
+
+/**
+ * 
+ * @param {amqp.Channel} channel 
+ * @return {Object} exchange & queue for pubsub trial
+ */
+exports.initRetryEx = async channel => {
+	try {
+		const dead_letter_queue = await channel.assertQueue('dead.letter.queue', {durable: false});
+
+		const retry_ex = await channel.assertExchange('retry.pubsub.exchange', 'direct', {durable: false});
+		const resend_ex = await channel.assertExchange('resend.pubsub.exchange', 'direct', {durable: false});
+		const retry_q = await channel.assertQueue('retry.pubsub.queue', {
+			durable: false,
+			arguments: {
+				'x-dead-letter-exchange': resend_ex.exchange,
+			}
+		});
+
+		channel.bindQueue(dead_letter_queue.queue, retry_ex.exchange, 'dead');
+
+		return {
+			retry_ex: retry_ex.exchange,
+			retry_q: retry_q.queue,
+			resend_ex: resend_ex.exchange
+		}
+	} catch (err){
+		throw err;
+	}
 }
