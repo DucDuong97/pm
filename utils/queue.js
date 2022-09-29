@@ -23,17 +23,6 @@ exports.initChannel = (callback) => {
 }
 
 
-exports.initAsyncChannel = async (cb) => {
-	try {
-		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
-		const channel = await conn.createChannel();
-	
-		cb(channel);
-	} catch (err){
-		throw err;
-	}
-}
-
 const initDLX = (channel) => {
     
 	channel.assertExchange(
@@ -62,7 +51,7 @@ const initDLX = (channel) => {
 	};
 }
 
-exports.initQueue = (channel, queue) => {
+exports._initQueue = (channel, queue) => {
 	let dl_args = initDLX(channel);
 
 	channel.assertQueue(queue, {
@@ -75,17 +64,73 @@ exports.initQueue = (channel, queue) => {
 	channel.prefetch(1);
 }
 
+//////////////////////////////////////////////////
+
+// ASYNC VERSION by @author: TRAN PHUC
+
+
 /**
  * 
- * @param {amqp.Channel} channel 
+ * @param {asyncAmqp.Channel} channel 
+ * @param {String} ex_name 
+ * @param {String} type 
+ * @returns 
+ */
+exports.initEntryEx = async (channel, ex_name, type) => {
+	return await channel.assertExchange(ex_name, type, {
+		durable: true
+	});
+}
+
+/**
+ * 
+ * @param {asyncAmqp.Channel} channel 
+ * @param {String} queue_name 
+ * @param {Boolean} temp - queue is temporary or not 
+ * @return {queue}
+ */
+exports.initQueue = async (channel, queue_name='', temp = false) => {
+	if (temp){
+		return await channel.assertQueue(queue_name, {
+			durable: true,
+			exclusive: true
+		})
+	}
+
+	return await channel.assertQueue(queue_name, {
+		durable: true
+	});
+}
+
+
+/**
+ * 
+ * @param {fn} cb 
+ */
+exports.initAsyncChannel = async (cb) => {
+	try {
+		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
+		const channel = await conn.createChannel();
+	
+		cb(channel);
+	} catch (err){
+		throw err;
+	}
+}
+
+// PUBSUB
+
+/**
+ * 
+ * @param {asyncAmqp.Channel} channel 
  * @return {Object} exchange & queue for pubsub trial
  */
-exports.initRetryEx = async channel => {
+exports.initPubsubRetryEx = async (channel, entry_ex, q) => {
 	try {
-		const dead_letter_queue = await channel.assertQueue('dead.letter.queue', {durable: false});
+		const dead_letter_queue = await channel.assertQueue('dead.letter.queue', {durable: true});
 
-		const retry_ex = await channel.assertExchange('retry.pubsub.exchange', 'direct', {durable: false});
-		const resend_ex = await channel.assertExchange('resend.pubsub.exchange', 'direct', {durable: false});
+		const retry_ex = await channel.assertExchange('retry.pubsub.exchange', 'direct', {durable: true});
+		const resend_ex = await channel.assertExchange('resend.pubsub.exchange', 'direct', {durable: true});
 		const retry_q = await channel.assertQueue('retry.pubsub.queue', {
 			durable: false,
 			arguments: {
@@ -93,14 +138,63 @@ exports.initRetryEx = async channel => {
 			}
 		});
 
+		// bind queue
 		channel.bindQueue(dead_letter_queue.queue, retry_ex.exchange, 'dead');
 
+		channel.bindQueue(q.queue, entry_ex.exchange, '');
+		channel.bindQueue(q.queue, resend_ex.exchange, q.queue);
+		channel.bindQueue(retry_q.queue, retry_ex.exchange, q.queue);
+
 		return {
-			retry_ex: retry_ex.exchange,
-			retry_q: retry_q.queue,
-			resend_ex: resend_ex.exchange
+			retry_ex,
+			retry_q,
+			resend_ex
 		}
 	} catch (err){
 		throw err;
 	}
+}
+
+// QUEUE
+
+/**
+ * @param {asyncAmqp.Channel} channel 
+ * @param {queue} queue
+ */
+exports.initQueueRetryEx = async (channel, entry_ex, q) => {
+	try {
+		const retry_ex = await channel.assertExchange('retry.exchange', 'direct', {
+			durable: true,
+			autoDelete: false
+		});
+		const dead_queue = await channel.assertQueue('dead.letter.queue', {
+			durable: true,
+			autoDelete: false
+		});
+		const retry_q = await channel.assertQueue('retry.queue', {
+			durable: true, autoDelete: false,
+			arguments: {
+				'x-dead-letter-exchange': 'entry.exchange',
+				'x-dead-letter-routing-key': q.queue
+			}
+		});
+
+		// bind
+		channel.bindQueue(dead_queue.queue, retry_ex.exchange, 'retry.fail');
+
+		channel.bindQueue(q.queue, entry_ex.exchange, 'user.created');
+		channel.bindQueue(q.queue, entry_ex.exchange, q.queue);
+		channel.bindQueue(retry_q.queue, retry_ex.exchange, 'user.created');
+		channel.bindQueue(retry_q.queue, retry_ex.exchange, q.queue);
+
+		return {
+			retry_ex,
+			dead_queue,
+			retry_q
+		}
+
+	} catch (err){
+		throw err;
+	}
+	
 }
