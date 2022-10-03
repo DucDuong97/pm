@@ -111,11 +111,12 @@ exports.initChannel = async (cb) => {
  * @param {queue} queue
  */
 exports.initRetryEx = async (channel, q) => {
-	entry_ex = await channel.assertExchange('entry.exchange', 'direct', {
-		durable: true,
-		autoDelete: true,
-	});
 	try {
+		const entry_ex = await channel.assertExchange('entry.exchange', 'direct', {
+			durable: true,
+			autoDelete: true,
+		});
+		
 		const retry_ex = await channel.assertExchange('retry.exchange', 'direct', {
 			durable: true,
 			autoDelete: true,
@@ -128,7 +129,6 @@ exports.initRetryEx = async (channel, q) => {
 			durable: true, autoDelete: false,
 			arguments: {
 				'x-dead-letter-exchange': 'entry.exchange',
-				'x-dead-letter-routing-key': q.queue
 			}
 		});
 
