@@ -2,6 +2,11 @@ class RetryUtils {
 	//
 
 	constructor(msg){
+		console.log(msg);
+
+		if (!msg.properties.headers){
+			msg.properties.headers = {};
+		}
 		if (!msg.properties.headers['x-retries']){
 			msg.properties.headers['x-retries'] = 0;
 		}

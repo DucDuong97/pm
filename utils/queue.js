@@ -30,7 +30,7 @@ const initDLX = (channel) => {
 		'direct',
 		options = {
 			durable: true,
-			autoDelete: false,
+			autoDelete: true,
 		},
 		function (error2, ex) {
 			if (error2) throw error2;
@@ -112,12 +112,13 @@ exports.initChannel = async (cb) => {
  */
 exports.initRetryEx = async (channel, q) => {
 	entry_ex = await channel.assertExchange('entry.exchange', 'direct', {
-		durable: true
+		durable: true,
+		autoDelete: true,
 	});
 	try {
 		const retry_ex = await channel.assertExchange('retry.exchange', 'direct', {
 			durable: true,
-			autoDelete: false
+			autoDelete: true,
 		});
 		const dead_queue = await channel.assertQueue('dead.letter.queue', {
 			durable: true,
