@@ -4,7 +4,7 @@ require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${proces
 
 const { spawn } = require('child_process');
 const { writeLog } = require('../../utils/log');
-const { initAsyncChannel, initQueueRetryEx, initQueue, initEntryEx } = require('../../utils/queue');
+const { initRetryEx, initQueue, initChannel } = require('../../utils/queue');
 const RetryUtils = require('../../utils/retry')
 
 console.log('~');
@@ -20,7 +20,7 @@ const app = args[0];
 const worker = args[1];
 
 
-const queue = `${app}.${worker}`;
+const queue = `worker.${app}.${worker}`;
 
 /**
  * Define queue
@@ -43,81 +43,75 @@ process.on('message', function(msg) {
 	}
 });
 
-initAsyncChannel(async (channel) => {
-	try {
-		// declare entry exchange
-		const entry_ex = await initEntryEx(channel, 'entry.exchange', 'direct');
+initChannel(async (channel) => {
 
-		// declare queue & exchange and binding
-		const q = await initQueue(channel, queue);
-		const { retry_ex, retry_q } = await initQueueRetryEx(channel, entry_ex, q);
-		
+	// declare entry exchange
 
-		console.log("[*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+	// declare queue & exchange and binding
+	const q = await initQueue(channel, queue);
+	const { retry_ex, retry_q } = await initRetryEx(channel, q);
+	
 
-		channel.consume(q.queue, function(msg){
+	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
 
-			const retryUtils = new RetryUtils(msg);
+	channel.consume(q.queue, function(msg){
 
-			console.log('\n~~');
-			let retry_count = retryUtils.getRetryCount();
-			console.log(`[->] Receive message: ${msg.content.toString()} | retry count: ${retry_count}`);
+		const retryUtils = new RetryUtils(msg);
 
-			running = true;
-			const child = spawn(
-				'php', [
-					process.env.SUCCESS_ROOT+'/bin/work.resolve.php',
-					'--app', app,
-					'--worker', worker,
-					'--msg', msg.content.toString(),
-					'--nosql'
-				],
-			);
+		console.log('\n~~');
+		let retry_count = retryUtils.getRetryCount();
+		console.log(`[->] Receive message: ${msg.content.toString()} | retry count: ${retry_count}`);
 
-			child.stdout.on('data', (data) => {
-				console.log(`child stdout: ${data}`);
-				writeLog(data, queue);
-			});
+		running = true;
+		const child = spawn(
+			'php', [
+				process.env.SUCCESS_ROOT+'/bin/work.resolve.php',
+				'--app', app,
+				'--worker', worker,
+				'--msg', msg.content.toString(),
+			],
+		);
 
-			child.stderr.on('data', (data) => {
-				console.log(`child stderr: ${data}`);
-				writeLog(data, queue);
-			});
-
-			child.on('exit', function (code, signal) {
-				console.log('Exit: child process exited with ' +
-						`code ${code} and signal ${signal}`);
-				
-				// if exit code == 0 (means script ends without errors) ack
-				if (code == 0){
-					console.log(" [x] Done");
-					channel.ack(msg);
-				}
-
-				// if exit code != 0 (means script ends due to PHP uncaught errors) to DLX
-				if (code != 0){
-					console.log(" [x] Execution fail");
-					
-					// ack, worker explicitly send failed msg to retry queue
-					channel.ack(msg);
-
-					// retry
-					retryUtils.retry(channel, retry_ex, q);
-				}
-
-				// if exit code == NULL (means that process is killed) requeue
-				// if (code == null){
-				// 	console.log("[x] Child process dies");
-				// 	channel.nack(msg);
-				// }
-			
-				running = false;
-			});
-		}, {
-			noAck: false,
+		child.stdout.on('data', (data) => {
+			console.log(`child stdout: ${data}`);
+			writeLog(data, queue);
 		});
-	} catch (err){
-		writeLog(err, q.queue);
-		throw err;
-	}
+
+		child.stderr.on('data', (data) => {
+			console.log(`child stderr: ${data}`);
+			writeLog(data, queue);
+		});
+
+		child.on('exit', function (code, signal) {
+			console.log('Exit: child process exited with ' +
+					`code ${code} and signal ${signal}`);
+			
+			// if exit code == 0 (means script ends without errors) ack
+			if (code == 0){
+				console.log(" [x] Done");
+				channel.ack(msg);
+			}
+
+			// if exit code != 0 (means script ends due to PHP uncaught errors) to DLX
+			if (code != 0){
+				console.log(" [x] Execution fail");
+				
+				// ack, worker explicitly send failed msg to retry queue
+				channel.ack(msg);
+
+				// retry
+				retryUtils.retry(channel, retry_ex, q);
+			}
+
+			// if exit code == NULL (means that process is killed) requeue
+			// if (code == null){
+			// 	console.log("[x] Child process dies");
+			// 	channel.nack(msg);
+			// }
+		
+			running = false;
+		});
+	}, {
+		noAck: false,
+	});
 });

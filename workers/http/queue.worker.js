@@ -18,7 +18,7 @@ var args = process.argv.slice(2);
 const app = args[0];
 const worker = args[1];
 
-const queue = `${app}.${worker}`;
+const queue = `worker.${app}.${worker}`;
 
 
 /**

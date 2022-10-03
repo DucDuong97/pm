@@ -1,7 +1,13 @@
-const dotenv = require('dotenv');
-dotenv.config();
+
+require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
 exports.app_worker_config = (app_name, worker_name, amount, type, mode) => {
+    
+    // if (!process.env.SUCCESS_ROOT){
+    //     console.log('[INFO] app and worker checking is disabled');
+    // }else{
+
+    // }
 
     if (type == 'pubsub'){
         var script = 'pubsub';

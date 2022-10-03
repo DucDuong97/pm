@@ -10,7 +10,7 @@ console.log('Deploying work queue...');
 /**
  * Default
  */
-var mode = 'basic';
+var mode = 'http';
 
 /**
  * Handle input arguments
@@ -42,6 +42,6 @@ startWorkers(app_worker_config(app, worker, 1, 'worker', mode), (err, apps) => {
         console.log('[*] To shutdown the workers, execute the following command:');
         console.log('---- pm2 delete all ----');
         console.log('~');
-        console.log(`[*] The queue name is: ${app}.${worker}`);
+        console.log(`[*] The queue name is: worker.${app}.${worker}`);
     }
 });
