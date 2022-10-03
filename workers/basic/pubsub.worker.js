@@ -5,7 +5,8 @@ require('dotenv').config({
 
 const { spawn } = require('child_process');
 const { writeLog } = require('../../utils/log');
-const { initAsyncChannel, initPubsubRetryEx, initQueue, initEntryEx } = require('../../utils/queue');
+const { initChannel } = require('../../utils/queue');
+const { initEntryEx, initTempQueue } = require('../../utils/pubsub');
 const RetryUtils = require('../../utils/retry');
 
 console.log('~');
@@ -23,13 +24,13 @@ const worker = args[2];
 const topic = `${app}.${event}`;
 
 
-initAsyncChannel(async (channel) => {
+initChannel(async (channel) => {
 
 	// declare entry exchange
-	const entry_ex = await initEntryEx(channel, topic, 'fanout')
+	const entry_ex = await initEntryEx(channel, topic)
 
 	// init queue, exchange and binding
-	const q = await initQueue(channel, '', true);
+	const q = await initTempQueue(channel);
 	const { retry_ex } = await initPubsubRetryEx(channel, entry_ex, q);
 
 

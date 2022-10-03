@@ -7,9 +7,9 @@ const { writeLog } = require('../../utils/log');
 const { initAsyncChannel, initQueueRetryEx, initQueue, initEntryEx } = require('../../utils/queue');
 const RetryUtils = require('../../utils/retry')
 
-console.log('~~');
-console.log('Deploying work queue...');
+console.log('~');
 console.log(`Success root: ${process.env.SUCCESS_ROOT}`);
+console.log('Deploying work queue...');
 
 /**
  * Handle input arguments
@@ -59,7 +59,7 @@ initAsyncChannel(async (channel) => {
 
 			const retryUtils = new RetryUtils(msg);
 
-			console.log('\n******************')
+			console.log('\n~~');
 			let retry_count = retryUtils.getRetryCount();
 			console.log(`[->] Receive message: ${msg.content.toString()} | retry count: ${retry_count}`);
 
@@ -98,7 +98,7 @@ initAsyncChannel(async (channel) => {
 				if (code != 0){
 					console.log(" [x] Execution fail");
 					
-					// ack
+					// ack, worker explicitly send failed msg to retry queue
 					channel.ack(msg);
 
 					// retry
@@ -106,10 +106,10 @@ initAsyncChannel(async (channel) => {
 				}
 
 				// if exit code == NULL (means that process is killed) requeue
-				if (code == null){
-					console.log("[x] Child process dies");
-					channel.nack(msg);
-				}
+				// if (code == null){
+				// 	console.log("[x] Child process dies");
+				// 	channel.nack(msg);
+				// }
 			
 				running = false;
 			});
