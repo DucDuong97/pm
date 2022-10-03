@@ -2,7 +2,6 @@ class RetryUtils {
 	//
 
 	constructor(msg){
-		console.log(msg);
 
 		if (!msg.properties.headers){
 			msg.properties.headers = {};
