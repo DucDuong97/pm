@@ -22,7 +22,7 @@ services:
     environment:
       NODE_ENV: development
       SUCCESS_ROOT: /home/trueroot/success
-      AMQP_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWD}@10.240.206.2:5672
+      AMQP_URL: amqp://${RBMQ_USER}:${RBMQ_PASSWD}@${RBMQ_HOST}:5672
     ports:
       - 3000:3000
         #network_mode: host
