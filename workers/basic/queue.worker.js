@@ -3,10 +3,12 @@
 require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
 const { spawn } = require('child_process');
-const { writeLog } = require('../../log');
-const { initChannel, initQueue } = require('../../queue');
+const { writeLog } = require('../../utils/log');
+const { initRetryEx, initQueue, initChannel } = require('../../utils/queue');
+const RetryUtils = require('../../utils/retry')
 
-console.log('~~');
+console.log('~');
+console.log(`Success root: ${process.env.SUCCESS_ROOT}`);
 console.log('Deploying work queue...');
 
 /**
@@ -17,8 +19,8 @@ var args = process.argv.slice(2);
 const app = args[0];
 const worker = args[1];
 
-const queue = `${app}.${worker}`;
 
+const queue = `worker.${app}.${worker}`;
 
 /**
  * Define queue
@@ -41,15 +43,24 @@ process.on('message', function(msg) {
 	}
 });
 
-initChannel((channel) => {
-	initQueue(channel, queue);
+initChannel(async (channel) => {
 
-	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", queue);
+	// declare entry exchange
+
+	// declare queue & exchange and binding
+	const q = await initQueue(channel, queue);
+	const { retry_ex, retry_q } = await initRetryEx(channel, q);
 	
-	channel.consume(queue, function(msg){
 
-		console.log('~');
-		console.log(" [x] Received %s", msg.content.toString());
+	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+
+	channel.consume(q.queue, function(msg){
+
+		const retryUtils = new RetryUtils(msg);
+
+		console.log('\n~~');
+		let retry_count = retryUtils.getRetryCount();
+		console.log(`[->] Receive message: ${msg.content.toString()} | retry count: ${retry_count}`);
 
 		running = true;
 		const child = spawn(
@@ -58,7 +69,6 @@ initChannel((channel) => {
 				'--app', app,
 				'--worker', worker,
 				'--msg', msg.content.toString(),
-				'--nosql'
 			],
 		);
 
@@ -78,21 +88,26 @@ initChannel((channel) => {
 			
 			// if exit code == 0 (means script ends without errors) ack
 			if (code == 0){
-				console.log("[x] Done");
+				console.log(" [x] Done");
 				channel.ack(msg);
 			}
 
 			// if exit code != 0 (means script ends due to PHP uncaught errors) to DLX
 			if (code != 0){
-				console.log("[x] Execution fail");
-				channel.nack(msg, false, false);
+				console.log(" [x] Execution fail");
+				
+				// ack, worker explicitly send failed msg to retry queue
+				channel.ack(msg);
+
+				// retry
+				retryUtils.retry(channel, retry_ex, q);
 			}
 
 			// if exit code == NULL (means that process is killed) requeue
-			if (code == null){
-				console.log("[x] Child process dies");
-				channel.nack(msg);
-			}
+			// if (code == null){
+			// 	console.log("[x] Child process dies");
+			// 	channel.nack(msg);
+			// }
 		
 			running = false;
 		});

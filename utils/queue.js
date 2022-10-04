@@ -1,9 +1,10 @@
 
-require('dotenv').config({path:require("path").dirname(__dirname)+`/.env`});
+require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
 const amqp = require('amqplib/callback_api');
+const asyncAmqp = require('amqplib');
 
-exports.initChannel = (callback) => {	
+exports._initChannel = (callback) => {	
 
 	amqp.connect(process.env.AMQP_URL, function(error0, connection) {
 		if (error0) {
@@ -21,6 +22,7 @@ exports.initChannel = (callback) => {
 	});
 }
 
+
 const initDLX = (channel) => {
     
 	channel.assertExchange(
@@ -28,7 +30,7 @@ const initDLX = (channel) => {
 		'direct',
 		options = {
 			durable: true,
-			autoDelete: false,
+			autoDelete: true,
 		},
 		function (error2, ex) {
 			if (error2) throw error2;
@@ -49,7 +51,7 @@ const initDLX = (channel) => {
 	};
 }
 
-exports.initQueue = (channel, queue) => {
+exports._initQueue = (channel, queue) => {
 	let dl_args = initDLX(channel);
 
 	channel.assertQueue(queue, {
@@ -60,4 +62,90 @@ exports.initQueue = (channel, queue) => {
 		}
 	});
 	channel.prefetch(1);
+}
+
+//////////////////////////////////////////////////
+
+// ASYNC VERSION by @author: TRAN PHUC
+
+/**
+ * In case of worker queue, it must align with config on AP
+ * Therefore MUST not change
+ * 
+ * @param {asyncAmqp.Channel} channel 
+ * @param {String} queue_name 
+ * @param {Boolean} temp - queue is temporary or not 
+ * @return {queue}
+ */
+exports.initQueue = async (channel, queue_name) => {
+	if (!queue_name || queue_name == ''){
+		return null;
+	}
+
+	return await channel.assertQueue(queue_name, {
+		durable: true,
+		autoDelete: true,
+	});
+}
+
+
+/**
+ * 
+ * @param {fn} cb 
+ */
+exports.initChannel = async (cb) => {
+	try {
+		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
+		const channel = await conn.createChannel();
+	
+		cb(channel);
+	} catch (err){
+		throw err;
+	}
+}
+
+// QUEUE
+
+/**
+ * @param {asyncAmqp.Channel} channel 
+ * @param {queue} queue
+ */
+exports.initRetryEx = async (channel, q) => {
+	try {
+		const entry_ex = await channel.assertExchange('entry.exchange', 'direct', {
+			durable: true,
+			autoDelete: true,
+		});
+		
+		const retry_ex = await channel.assertExchange('retry.exchange', 'direct', {
+			durable: true,
+			autoDelete: true,
+		});
+		const dead_queue = await channel.assertQueue('dead.letter.queue', {
+			durable: true,
+			autoDelete: false
+		});
+		const retry_q = await channel.assertQueue('retry.queue', {
+			durable: true, autoDelete: false,
+			arguments: {
+				'x-dead-letter-exchange': 'entry.exchange',
+			}
+		});
+
+		// bind
+		channel.bindQueue(dead_queue.queue, retry_ex.exchange, 'retry.fail');
+
+		channel.bindQueue(q.queue, entry_ex.exchange, q.queue);
+		channel.bindQueue(retry_q.queue, retry_ex.exchange, q.queue);
+
+		return {
+			retry_ex,
+			dead_queue,
+			retry_q
+		}
+
+	} catch (err){
+		throw err;
+	}
+	
 }

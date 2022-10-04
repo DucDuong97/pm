@@ -1,7 +1,6 @@
 const pm2 = require('pm2');
 
 exports.startWorkers = (configs, errback) => {
-    console.log(JSON.stringify(configs));
     pm2.connect(function(err){
         if (err) {
             console.error(`connection error: ${err}`);
