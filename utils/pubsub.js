@@ -11,13 +11,23 @@ const asyncAmqp = require('amqplib');
  * 
  * @param {asyncAmqp.Channel} channel 
  * @param {String} ex_name 
- * @param {String} type 
  * @returns 
  */
 exports.initEntryEx = async (channel, topic) => {
 	return await channel.assertExchange(topic, 'fanout', {
-		durable: true
+		durable: true,
+		autoDelete: false,
 	});
+}
+
+/**
+ * 
+ * @param {asyncAmqp.Channel} channel 
+ * @param {String} ex_name
+ * @returns 
+ */
+exports.deleteEntryEx = (channel, topic, cb) => {
+	channel.deleteExchange(topic, cb);
 }
 
 /**

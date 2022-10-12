@@ -1,16 +1,17 @@
 
+const ROOT = require("path").dirname(__dirname);
+const ENV_EXT = process.env.NODE_ENV == 'development' ? '':'.local';
 
-require('dotenv').config({
-	path:require("path").basename(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
+require('dotenv').config({ path:`${ROOT}/.env${ENV_EXT}` });
 
-const { spawn } = require('child_process');
 const { writeLog } = require('../../utils/log');
 const { initChannel } = require('../../utils/queue');
-const { initEntryEx, initTempQueue } = require('../../utils/pubsub');
+const { initEntryEx, initTempQueue, initRetryEx } = require('../../utils/pubsub');
 const RetryUtils = require('../../utils/retry');
 
 console.log('~');
-console.log('Deploying pubsub queue...');
+console.log(`Success root: ${process.env.SUCCESS_ROOT}`);
+console.log('Deploying pubsub queue basic...');
 
 /**
  * Handle input arguments
@@ -18,12 +19,13 @@ console.log('Deploying pubsub queue...');
 var args = process.argv.slice(2);
 
 const app = args[0];
-const event = args[1];
-const worker = args[2];
-
-const topic = `${app}.${event}`;
+const worker = args[1];
+const topic = args[2];
 
 
+/**
+ * Init consumer
+ */
 initChannel(async (channel) => {
 
 	// declare entry exchange
@@ -31,10 +33,10 @@ initChannel(async (channel) => {
 
 	// init queue, exchange and binding
 	const q = await initTempQueue(channel);
-	const { retry_ex } = await initPubsubRetryEx(channel, entry_ex, q);
-
+	const { retry_ex } = await initRetryEx(channel, entry_ex, q);
 
 	console.log('pubsub to queue:', q.queue);
+	console.log('Listen from topic:', topic);
 
 	channel.prefetch(1);
 	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", topic);
@@ -48,6 +50,7 @@ initChannel(async (channel) => {
 		console.log('\n*******');
 		console.log(`[->] Receive message: ${msg.content.toString()} | retry count: ${retry_count}`);
 
+		const { spawn } = require('child_process');
 		const child = spawn(
 			'php', [
 				process.env.SUCCESS_ROOT+'/bin/work.resolve.php', 
@@ -95,12 +98,3 @@ initChannel(async (channel) => {
 		noAck: false,
 	});
 });
-
-process.on('message', function(msg) {
-	if (msg == 'shutdown') {
-		writeLog('Finished closing connections', topic);
-		setTimeout(function() {
-			process.exit(0);
-		})
-	}
-})

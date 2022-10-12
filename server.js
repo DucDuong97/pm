@@ -1,6 +1,8 @@
 
 const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
 const { app_worker_config } = require('./platform.js');
+const { initEntryEx, deleteEntryEx } = require('./utils/pubsub');
+const { initChannel } = require('./utils/queue');
 
 require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
@@ -19,12 +21,15 @@ app.post("/start-worker", (req, res) => {
 	let amount   = req.body.amount;
 	let type     = req.body.type;
 	let mode     = req.body.mode;
+	let topic     = req.body.topic;
 
-	console.log(type);
+	console.log(`Start worker: ${app_name}.${worker}`);
+	console.log(`With type: ${type}`);
+	console.log(`With mode: ${mode}`);
 
 	let result = {};
 
-	startWorkers(app_worker_config(app_name, worker, amount, type, mode), (err, apps) => {
+	startWorkers(app_worker_config(app_name, worker, amount, type, mode, topic), (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -95,7 +100,52 @@ app.post("/delete-worker", (req, res) => {
 	});
 });
 
+app.post("/create-topic", (req, res) => {
+	console.log("Creating topic...");
+
+	let app = req.body.app_name;
+	let topic   = req.body.topic_name;
+
+	initChannel(async (channel) => {
+		let result = {};
+
+		initEntryEx(channel, `topic.${app}.${topic}`);
+
+		if (false) {
+			result.success = false;
+			result.err_msg = err;
+		} else {
+			result.success = true;
+		}
+
+		res.json(result);
+	});
+});
+
+app.post("/delete-topic", (req, res) => {
+	console.log("Deleting topic...");
+
+	let app = req.body.app_name;
+	let topic   = req.body.topic_name;
+	
+	initChannel(async (channel) => {
+		let result = {};
+
+		deleteEntryEx(channel, `topic.${app}.${topic}`);
+		
+		if (false) {
+			result.success = false;
+			result.err_msg = err;
+		} else {
+			result.success = true;
+		}
+
+		res.json(result);
+	});
+});
+
 app.get("/describe-worker/:worker_name", (req, res) => {
+	console.log("Describe worker...");
 
 	let result = {};
 
@@ -108,6 +158,30 @@ app.get("/describe-worker/:worker_name", (req, res) => {
 			result.amount = worker.length;
 			result.worker = worker;
 		}
+		res.json(result);
+	});
+});
+
+app.get("/describe-queue/:queue_name", (req, res) => {
+	console.log("Describe queue: " + req.params.queue_name);
+
+	const AMQPStats = require('amqp-stats');
+	var stats = new AMQPStats({
+		hostname: "localhost:15672",  // default: localhost:55672
+	});
+
+	stats.getQueue('/', req.params.queue_name, (err, _, data) => {
+		let result = {};
+
+		if (err) {
+			console.log(err);
+			result.success = false;
+			result.err_msg = err;
+		} else {
+			result.success = true;
+			result.data = data;
+		}
+		
 		res.json(result);
 	});
 });

@@ -1,7 +1,7 @@
 
 require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
 
-exports.app_worker_config = (app_name, worker_name, amount, type, mode) => {
+exports.app_worker_config = (app_name, worker_name, amount, type, mode, topic) => {
     
     // if (!process.env.SUCCESS_ROOT){
     //     console.log('[INFO] app and worker checking is disabled');
@@ -25,7 +25,7 @@ exports.app_worker_config = (app_name, worker_name, amount, type, mode) => {
         name: `${app_name}.${worker_name}`,
         namespace: app_name,
         script: `workers/${mode_ext}/${script}.worker.js`,
-        args: `${app_name} ${worker_name}`,
+        args: `${app_name} ${worker_name} ${topic}`,
         instances: amount,
         shutdown_with_message: true,
         kill_timeout : 10000
