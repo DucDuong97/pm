@@ -4,6 +4,8 @@ require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${proces
 const amqp = require('amqplib/callback_api');
 const asyncAmqp = require('amqplib');
 
+const RetryUtils = require('./retry');
+
 exports._initChannel = (callback) => {	
 
 	amqp.connect(process.env.AMQP_URL, function(error0, connection) {
@@ -23,7 +25,7 @@ exports._initChannel = (callback) => {
 }
 
 
-const initDLX = (channel) => {
+const _initDLX = (channel) => {
     
 	channel.assertExchange(
 		'dead.letter.exchange',
@@ -52,7 +54,7 @@ const initDLX = (channel) => {
 }
 
 exports._initQueue = (channel, queue) => {
-	let dl_args = initDLX(channel);
+	let dl_args = _initDLX(channel);
 
 	channel.assertQueue(queue, {
 		durable: true,
@@ -148,4 +150,20 @@ exports.initRetryEx = async (channel, q) => {
 		throw err;
 	}
 	
+}
+
+exports.onSuccess = (channel, msg) => {
+	console.log(" [x] Done");
+	channel.ack(msg);
+}
+
+exports.onFailure = async (channel, msg, retry_ex, queue) => {
+	
+	const retryUtils = new RetryUtils(msg);
+	
+	console.log(" [x] Execution fail");
+	// ack, worker explicitly send failed msg to retry queue
+	channel.ack(msg);
+	// retry
+	retryUtils.retry(channel, retry_ex, queue);
 }

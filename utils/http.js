@@ -9,25 +9,43 @@ var FormData = require('form-data');
 const httpsAgent = new https.Agent({
 	rejectUnauthorized: false, // (NOTE: this will disable client verification)
 	cert: fs.readFileSync(require("path").dirname(__dirname)+"/cert/success.crt"),
-	key: fs.readFileSync(require("path").dirname(__dirname)+"/cert/success.key"),
+	key:  fs.readFileSync(require("path").dirname(__dirname)+"/cert/success.key"),
 	passphrase: "YYY"
 })
 
-exports.send = function(app, worker, msg, callback, fallback){
+const execute = function(job_context, dataCb, errCb, succCb, failCb, finalCb){
+    console.log('Sending HTTP...');
+
     var bodyFormData = new FormData();
     bodyFormData.append('__utoken', process.env.UTOKEN);
-    bodyFormData.append('data', msg);
+    bodyFormData.append('data', job_context.msg);
 
     axios({
         method: 'post',
-        url: `${process.env.HTTP_URL}/${app}/.queue/${worker}`,
+        url: `${process.env.HTTP_URL}/${job_context.app}/.queue/${job_context.worker}`,
         data: bodyFormData,
         httpsAgent: httpsAgent,
     })
     .then(res => {
-        callback(res.data);
+        const data = res.data;
+        console.log('xyz: ', data);
+        console.log(`Message: ${data.message}`);
+        console.log(`Output: ${data.data}`);
+        dataCb(data.data);
+        if (data && data.code == 1){
+            succCb();
+        }
+        if (!data || data.code != 1){
+            failCb();
+        }
+        finalCb();
     })
-    .catch(error => {
-        fallback(error);
+    .catch(err => {
+        console.log("[x] Connection error");
+        errCb(err);
+        failCb();
+        finalCb();
     });
-}
+};
+
+module.exports = execute;

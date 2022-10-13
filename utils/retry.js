@@ -52,7 +52,7 @@ class RetryUtils {
 
 	//
 
-	retry(channel, retry_ex, q){
+	retry(channel, retry_ex, queue){
 		const retry_delay = this.getNextRetryDelay();
 		const retry_count = this.getRetryCount();
 		
@@ -64,7 +64,7 @@ class RetryUtils {
 			console.log(` [x] Message will be sent back to exchange: ${retry_ex.exchange}`)
 			
 			const msg_options = this.getRetryOptions();
-			channel.publish(retry_ex.exchange, q.queue, Buffer.from(this.msg.content.toString()), msg_options);
+			channel.publish(retry_ex.exchange, queue, Buffer.from(this.msg.content.toString()), msg_options);
 		} else {
 			// send to dead letter queue
 			// TODO: consider what information of message to publish to dead letter queue

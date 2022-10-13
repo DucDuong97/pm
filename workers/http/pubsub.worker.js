@@ -1,7 +1,7 @@
 
 console.log('~');
-console.log(`Success root: ${process.env.SUCCESS_ROOT}`);
-console.log('Deploying pubsub queue basic...');
+console.log(`HTTP URL: ${process.env.HTTP_URL}`);
+console.log('Deploying pubsub queue http...');
 
 require('../../utils/load.env');
 
@@ -50,7 +50,7 @@ QueueUtils.initChannel(async (channel) => {
 
 		graceful.run();
 
-		require('../../utils/spawn')(
+		require('../../utils/http')(
 			{
 				app: app,
 				worker: worker,
@@ -59,7 +59,7 @@ QueueUtils.initChannel(async (channel) => {
 			(data) => dataOutput(data, topic),
 			(data) => errorOutput(data, topic),
 			() => QueueUtils.onSuccess(channel, msg),
-			() => QueueUtils.onFailure(channel, msg, retry_ex, queue),
+			() => QueueUtils.onFailure(channel, msg, retry_ex, q.queue),
 			() => graceful.stop()
 		);
 	}, {

@@ -1,14 +1,9 @@
 
-
-require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
-
-const { writeLog } = require('../../utils/log');
-const { initChannel, initQueue } = require('../../utils/queue');
-const http = require('../../utils/http');
-
-console.log('~~');
+console.log('~');
+console.log(`HTTP URL: ${process.env.HTTP_URL}`);
 console.log('Deploying work queue http...');
-console.log(`Target HTTP URL: ${process.env.HTTP_URL}`);
+
+require('../../utils/load.env');
 
 /**
  * Handle input arguments
@@ -17,63 +12,44 @@ var args = process.argv.slice(2);
 
 const app = args[0];
 const worker = args[1];
-
 const queue = `worker.${app}.${worker}`;
 
+/**
+ * Graceful shutdown
+ */
+const GracefulUtils = require('../../utils/graceful');
+const graceful = new GracefulUtils();
+graceful.graceful();
 
 /**
- * Define queue
+ * Consumer
  */
-var running = false;
+const { errorOutput, dataOutput } = require('../../utils/output')
+const QueueUtils = require('../../utils/queue');
 
-process.on('message', function(msg) {
-	if (msg == 'shutdown') {
-		setTimeout(async function() {
-			console.log('~');
-			console.log('GRACEFUL SHUTDOWN: start');
-			while (running){
-				console.log('GRACEFUL SHUTDOWN: a process is still running. Sleep...');
-				await new Promise(resolve => setTimeout(resolve, 1000));
-			}
-			console.log('GRACEFUL SHUTDOWN: successful');
-			process.exit(0);
-		});
-	}
-});
-
-initChannel((channel) => {
-	initQueue(channel, queue);
+QueueUtils.initChannel((channel) => {
+	QueueUtils.initQueue(channel, queue);
 
 	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", queue);
 	
 	channel.consume(queue, function(msg){
+		console.log('\n~~');
+		console.log(`[->] Receive message: ${msg.content.toString()}`);
 
-		console.log('~');
-		console.log("[x] Received %s", msg.content.toString());
+		graceful.run();
 
-		running = true;
-		http.send(app, worker, msg.content.toString(), function(code){
-			
-			console.log(`Message: ${code.message}`);
-			writeLog('Message:'+code.message, queue);
-			console.log(`Output: ${code.data}`);
-			writeLog('Output:'+code.data, queue);
-			
-			if (code && code.code == 1){
-				console.log("[x] Done");
-				channel.ack(msg);
-			}
-			if (!code || code.code != 1){
-				console.log("[x] Execution fail");
-				channel.nack(msg, false, false);
-			}
-			running = false;
-		}, function(err){
-			writeLog(err, queue);
-			console.log("[x] Connection error");
-			channel.ack(msg);
-			running = false;
-		});
+		require('../../utils/http')(
+			{
+				app: app,
+				worker: worker,
+				msg: msg.content.toString(),
+			},
+			(data) => dataOutput(data, queue),
+			(data) => errorOutput(data, queue),
+			() => QueueUtils.onSuccess(channel, msg),
+			() => QueueUtils.onFailure(channel, msg, retry_ex, queue),
+			() => graceful.stop()
+		);
 	}, {
 		noAck: false,
 	});
