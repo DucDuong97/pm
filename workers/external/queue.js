@@ -1,7 +1,7 @@
 
 console.log('~');
 console.log(`HTTP URL: ${process.env.HTTP_URL}`);
-console.log('Deploying work queue http...');
+console.log('Deploying external queue worker http...');
 
 require('../../utils/load.env');
 
@@ -10,9 +10,10 @@ require('../../utils/load.env');
  */
 var args = process.argv.slice(2);
 
-const app = args[0];
+const service_name = args[0];
 const worker = args[1];
-const queue = `worker.${app}.${worker}`;
+const address = args[2];
+const queue = `external.worker.${service_name}.${worker}.http`;
 
 /**
  * Graceful shutdown
@@ -27,8 +28,9 @@ graceful.graceful();
 const { errorOutput, dataOutput } = require('../../utils/output')
 const QueueUtils = require('../../utils/queue');
 
-QueueUtils.initChannel((channel) => {
-	QueueUtils.initQueue(channel, queue);
+QueueUtils.initChannel(async (channel) => {
+	const q = await QueueUtils.initQueue(channel, queue);
+	const { retry_ex, _ } = await QueueUtils.initRetryEx(channel, q);
 
 	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", queue);
 	
@@ -38,9 +40,9 @@ QueueUtils.initChannel((channel) => {
 
 		graceful.run();
 
-		require('../../utils/http')(
+		require('../../utils/ext.http')(
 			{
-				app: app,
+				address: address,
 				worker: worker,
 				msg: msg.content.toString(),
 			},

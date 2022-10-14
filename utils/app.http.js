@@ -28,9 +28,7 @@ const execute = function(job_context, dataCb, errCb, succCb, failCb, finalCb){
     })
     .then(res => {
         const data = res.data;
-        console.log('xyz: ', data);
-        console.log(`Message: ${data.message}`);
-        console.log(`Output: ${data.data}`);
+        console.log('Data: ', data);
         dataCb(data.data);
         if (data && data.code == 1){
             succCb();

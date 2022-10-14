@@ -1,6 +1,6 @@
 
 const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
-const { app_worker_config } = require('./platform.js');
+const { app_worker_config, service_worker_config } = require('./platform.js');
 const { initEntryEx, deleteEntryEx } = require('./utils/pubsub');
 const { initChannel } = require('./utils/queue');
 
@@ -17,39 +17,66 @@ app.get("/url", (req, res) => {
 app.post("/start-worker", (req, res) => {
 
 	let app_name = req.body.app_name;
+	let service_name = req.body.service_name;
+
 	let worker   = req.body.worker_name;
 	let amount   = req.body.amount;
+
 	let type     = req.body.type;
+	let topic    = req.body.topic;
+
 	let mode     = req.body.mode;
-	let topic     = req.body.topic;
+	let address     = req.body.address;
 
-	console.log(`Start worker: ${app_name}.${worker}`);
-	console.log(`With type: ${type}`);
-	console.log(`With mode: ${mode}`);
+	console.log("type ", type);
 
-	let result = {};
-
-	startWorkers(app_worker_config(app_name, worker, amount, type, mode, topic), (err, apps) => {
-		if (err) {
-			result.success = false;
-			result.err_msg = err;
-		} else {
-			result.success = true;
-			result.apps = apps;
-		}
-
-		res.json(result);
-	});
+	if (type.startsWith('external.')){
+		console.log(`Starting service worker: ${service_name}.${worker} ...`);
+		console.log(`With type: ${type}`);
+		console.log(`With mode: ${mode}`);
+	
+		let result = {};
+	
+		startWorkers(service_worker_config(service_name, worker, amount, type, mode, address, topic), (err, apps) => {
+			if (err) {
+				result.success = false;
+				result.err_msg = err;
+			} else {
+				result.success = true;
+				result.apps = apps;
+			}
+	
+			res.json(result);
+		});
+	} else{
+		console.log(`Starting app worker: ${app_name}.${worker} ...`);
+		console.log(`With type: ${type}`);
+		console.log(`With mode: ${mode}`);
+	
+		let result = {};
+	
+		startWorkers(app_worker_config(app_name, worker, amount, type, mode, topic), (err, apps) => {
+			if (err) {
+				result.success = false;
+				result.err_msg = err;
+			} else {
+				result.success = true;
+				result.apps = apps;
+			}
+	
+			res.json(result);
+		});
+	}
 });
 
 app.post("/restart-worker", (req, res) => {
 
-	let app_name = req.body.app_name;
 	let worker   = req.body.worker_name;
+	console.log(`Restarting worker: ${worker} ...`);
 
 	let result = {};
 
-	restartWorkers(`${app_name}.${worker}`, (err, apps) => {
+	restartWorkers(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -64,12 +91,12 @@ app.post("/restart-worker", (req, res) => {
 
 app.post("/stop-worker", (req, res) => {
 
-	let app_name = req.query.app_name;
-	let worker   = req.query.worker_name;
+	let worker   = req.body.worker_name;
+	console.log(`Stopping worker: ${worker} ...`);
 
 	let result = {};
 
-	stopWorker(app_name + '.' + worker, (err, apps) => {
+	stopWorker(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -83,12 +110,12 @@ app.post("/stop-worker", (req, res) => {
 
 app.post("/delete-worker", (req, res) => {
 
-	let app_name = req.query.app_name;
-	let worker   = req.query.worker_name;
+	let worker   = req.body.worker_name;
+	console.log(`Deleting worker: ${worker} ...`);
 
 	let result = {};
 
-	deleteWorker(app_name + '.' + worker, (err, apps) => {
+	deleteWorker(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -145,7 +172,7 @@ app.post("/delete-topic", (req, res) => {
 });
 
 app.get("/describe-worker/:worker_name", (req, res) => {
-	console.log("Describe worker...");
+	console.log(`Describe worker: ${req.params.worker_name} ...`);
 
 	let result = {};
 

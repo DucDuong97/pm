@@ -63,7 +63,6 @@ exports._initQueue = (channel, queue) => {
 			...dl_args,
 		}
 	});
-	channel.prefetch(1);
 }
 
 //////////////////////////////////////////////////
@@ -99,6 +98,8 @@ exports.initChannel = async (cb) => {
 	try {
 		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
 		const channel = await conn.createChannel();
+	
+		channel.prefetch(1);
 	
 		cb(channel);
 	} catch (err){

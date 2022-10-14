@@ -15,6 +15,7 @@ exports.writeLog = (log, queue) => {
 			timeZone: 'Asia/Bangkok'
 	});
 	let content = `[${datetime}] ${log}`;
+	console.log(content + '\n');
 
 	// Write log to file
 	fs.writeFileSync(logs_dir, content,{

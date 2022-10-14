@@ -39,8 +39,7 @@ QueueUtils.initChannel(async (channel) => {
 
 	console.log('pubsub to queue:', q.queue);
 	console.log('Listen from topic:', topic);
-
-	channel.prefetch(1);
+	
 	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", topic);
 	
 	await channel.consume(q.queue, function(msg){
@@ -50,7 +49,7 @@ QueueUtils.initChannel(async (channel) => {
 
 		graceful.run();
 
-		require('../../utils/http')(
+		require('../../utils/app.http')(
 			{
 				app: app,
 				worker: worker,
