@@ -5,8 +5,8 @@ console.log('Deploying pubsub queue http...');
 
 require('../../utils/load.env');
 
-const QueueUtils = require('../../utils/queue');
-const { initEntryEx, initTempQueue, initRetryEx } = require('../../utils/pubsub');
+const QueueUtils = require('../../queue/queue');
+const { initEntryEx, initTempQueue, initRetryEx } = require('../../queue/pubsub');
 const { errorOutput, dataOutput } = require('../../utils/output')
 
 /**
@@ -50,7 +50,7 @@ QueueUtils.initChannel(async (channel) => {
 
 		graceful.run();
 
-		require('../../utils/ext.http')(
+		require('../../modes/ext.http')(
 			{
 				address: address,
 				worker: worker,

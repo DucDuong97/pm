@@ -26,7 +26,7 @@ graceful.graceful();
  * Consumer
  */
 const { errorOutput, dataOutput } = require('../../utils/output')
-const QueueUtils = require('../../utils/queue');
+const QueueUtils = require('../../queue/queue');
 
 QueueUtils.initChannel(async (channel) => {
 	const q = await QueueUtils.initQueue(channel, queue);
@@ -40,7 +40,7 @@ QueueUtils.initChannel(async (channel) => {
 
 		graceful.run();
 
-		require('../../utils/ext.http')(
+		require('../../modes/ext.http')(
 			{
 				address: address,
 				worker: worker,

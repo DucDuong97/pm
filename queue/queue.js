@@ -1,6 +1,4 @@
 
-require('dotenv').config({path:require("path").dirname(__dirname)+`/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
-
 const amqp = require('amqplib/callback_api');
 const asyncAmqp = require('amqplib');
 
@@ -26,7 +24,7 @@ exports._initChannel = (callback) => {
 
 
 const _initDLX = (channel) => {
-    
+
 	channel.assertExchange(
 		'dead.letter.exchange',
 		'direct',
@@ -70,6 +68,23 @@ exports._initQueue = (channel, queue) => {
 // ASYNC VERSION by @author: TRAN PHUC
 
 /**
+ * 
+ * @param {fn} cb 
+ */
+exports.initChannel = async (cb) => {
+	try {
+		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
+		const channel = await conn.createChannel();
+	
+		channel.prefetch(1);
+	
+		cb(channel);
+	} catch (err){
+		throw err;
+	}
+}
+
+/**
  * In case of worker queue, it must align with config on AP
  * Therefore MUST not change
  * 
@@ -88,26 +103,6 @@ exports.initQueue = async (channel, queue_name) => {
 		autoDelete: true,
 	});
 }
-
-
-/**
- * 
- * @param {fn} cb 
- */
-exports.initChannel = async (cb) => {
-	try {
-		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
-		const channel = await conn.createChannel();
-	
-		channel.prefetch(1);
-	
-		cb(channel);
-	} catch (err){
-		throw err;
-	}
-}
-
-// QUEUE
 
 /**
  * @param {asyncAmqp.Channel} channel 

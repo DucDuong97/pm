@@ -1,7 +1,7 @@
 
 const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
 const { app_worker_config, service_worker_config } = require('./platform.js');
-const { initEntryEx, deleteEntryEx } = require('./utils/pubsub');
+const { initEntryEx, deleteEntryEx } = require('./queue/pubsub');
 const { initChannel } = require('./utils/queue');
 
 require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});

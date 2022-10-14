@@ -39,7 +39,7 @@ QueueUtils.initChannel(async (channel) => {
 
 		graceful.run();
 
-		require('../../utils/app.http')(
+		require('../../modes/app.http')(
 			{
 				app: app,
 				worker: worker,

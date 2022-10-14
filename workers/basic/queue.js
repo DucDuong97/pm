@@ -23,7 +23,7 @@ const graceful = new GracefulUtils();
 graceful.graceful();
 
 const { errorOutput, dataOutput } = require('../../utils/output')
-const QueueUtils = require('../../utils/queue');
+const QueueUtils = require('../../queue/queue');
 
 QueueUtils.initChannel(async (channel) => {
 
@@ -43,7 +43,7 @@ QueueUtils.initChannel(async (channel) => {
 
 		graceful.run();
 
-		require('../../utils/app.spawn')(
+		require('../../modes/app.spawn')(
 			{
 				app: app,
 				worker: worker,

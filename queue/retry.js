@@ -1,5 +1,4 @@
 class RetryUtils {
-	//
 
 	constructor(msg){
 
