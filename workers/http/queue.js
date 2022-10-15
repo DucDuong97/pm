@@ -25,7 +25,7 @@ graceful.graceful();
  * Consumer
  */
 const { errorOutput, dataOutput } = require('../../utils/output')
-const QueueUtils = require('../../utils/queue');
+const QueueUtils = require('../../queue/queue');
 
 QueueUtils.initChannel(async (channel) => {
 	const q = await QueueUtils.initQueue(channel, queue);
