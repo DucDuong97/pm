@@ -1,17 +1,14 @@
 version: '3'
 
 services:
-  #rabbitmq:
-  #  image: rabbitmq:3.10-management
-  #  container_name: 'rabbitmq'
-  #  volumes:
-  #      - ./rabbitmq/data/:/var/lib/rabbitmq/mnesia
-  #      - ./rabbitmq/log/:/var/log/rabbitmq
-  #  ports:
-  #      - 5673:5672
-  #      - 15673:15672
-  #  networks:
-  #      - rabbitmq_nodejs
+  rabbitmq:
+   image: rabbitmq:3.10-management
+   container_name: 'worker_rabbitmq'
+   ports:
+       - 5673:5672
+       - 15673:15672
+   networks:
+       - worker-rabbitmq
 
   worker-management:
     build: .
@@ -20,18 +17,21 @@ services:
       - /home/trueroot:/home/trueroot
       - .:/home/node/worker-mngt
     environment:
-      NODE_ENV: development
+      NODE_ENV: local
       SUCCESS_ROOT: /home/trueroot/success
-      AMQP_URL: amqp://${RBMQ_USER}:${RBMQ_PASSWD}@${RBMQ_HOST}:5672
+      AMQP_URL: amqp://rabbitmq:5672
     ports:
-      - 3000:3000
-        #network_mode: host
+      - "3001:3000"
+    extra_hosts:
+      - "true.success.beta:192.168.1.27"
     networks:
-      - rabbitmq_nodejs
+      - worker-rabbitmq
       #command: bash -c "while true; do echo hello; sleep 2; done"
       #command: bash -c "node server.json" 
+
 networks:
-  rabbitmq_nodejs:
+  worker-rabbitmq:
     driver: bridge
-                
+    name: worker-rabbitmq
+
 
