@@ -1,6 +1,6 @@
 
 const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
-const { app_worker_config, service_worker_config } = require('./platform.js');
+const { app_worker_config, service_worker_config, ip_worker_config } = require('./platform.js');
 const { initEntryEx, deleteEntryEx } = require('./queue/pubsub');
 const { initChannel } = require('./queue/queue');
 
@@ -26,16 +26,39 @@ app.post("/start-worker", (req, res) => {
 	let topic    = req.body.topic;
 
 	let mode     = req.body.mode;
-	let address     = req.body.address;
+	let ip     = req.body.ip;
+	let hostname     = req.body.hostname;
 
 	console.log("type ", type);
 
-	if (type.startsWith('external.')){
+	if (type.startsWith('ip.')){
+		console.log(`Starting IP worker: ${service_name}.${worker} ...`);
+		console.log(`With type: ${type}`);
+		console.log(`With mode: ${mode}`);
+	
+		let result = {};
+
+		type = type.replace("ip.", "");
+	
+		startWorkers(ip_worker_config(app_name, worker, amount, type, mode, ip, hostname, topic), (err, apps) => {
+			if (err) {
+				result.success = false;
+				result.err_msg = err;
+			} else {
+				result.success = true;
+				result.apps = apps;
+			}
+	
+			res.json(result);
+		});
+	} else if (type.startsWith('external.')){
 		console.log(`Starting service worker: ${service_name}.${worker} ...`);
 		console.log(`With type: ${type}`);
 		console.log(`With mode: ${mode}`);
 	
 		let result = {};
+
+		type = type.replace("external.", "");
 	
 		startWorkers(service_worker_config(service_name, worker, amount, type, mode, address, topic), (err, apps) => {
 			if (err) {
@@ -87,6 +110,45 @@ app.post("/restart-worker", (req, res) => {
 
 		res.json(result);
 	});
+});
+
+app.get("/worker-logs/:worker_name", (req, res) => {
+
+	let worker   = req.params.worker_name;
+	console.log(`Worker logs: ${worker} ...`);
+
+	let result = '';
+
+	const { spawn } = require('child_process');
+	const child = spawn('pm2', [
+		'logs', '--lines', '100', '--nostream', worker
+	]);
+    child.stdout.on('data', (data) => {
+        console.log(`Get logs...`);
+        console.log(data);
+        result += data;
+    });
+    child.stderr.on('data', (data) => {
+        console.log(`Get logs errors...`);
+        console.log(data);
+    });
+	child.on('exit', function (code, signal) {
+        console.log('Exit: child process exited with ' +
+                `code ${code} and signal ${signal}`);
+        
+        // if exit code == 0 (means script ends without errors) ack
+        if (code == 0){
+			console.log('Send logs to Client....');
+            res.json({
+				success: true,
+				data: result
+			});
+			return;
+        }
+		res.json({
+			success: false,
+		});
+    });
 });
 
 app.post("/stop-worker", (req, res) => {

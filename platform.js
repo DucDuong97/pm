@@ -26,6 +26,25 @@ exports.app_worker_config = (app_name, worker_name, amount, type, mode, topic) =
     };
 };
 
+exports.ip_worker_config = (app_name, worker_name, amount, type, mode, address, hostname, topic) => {
+
+    if (type == 'pubsub'){
+        var script = 'pubsub';
+    } else {
+        var script = 'queue';
+    }
+
+    return {
+        name: `ip.${app_name}.${worker_name}`,
+        namespace: app_name,
+        script: `workers/ip/${script}.js`,
+        args: `${app_name} ${worker_name} ${hostname} ${address} ${topic}`,
+        instances: amount,
+        shutdown_with_message: true,
+        kill_timeout : 10000
+    };
+};
+
 exports.service_worker_config = (service_name, worker_name, amount, type, mode, address, topic) => {
 
     if (type == 'pubsub'){

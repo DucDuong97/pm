@@ -22,7 +22,7 @@ services:
     ports:
       - "3001:3000"
     extra_hosts:
-      - "true.success.beta:192.168.1.27"
+      - "true.success.beta:host-gateway"
     networks:
       - worker-rabbitmq
       #command: bash -c "while true; do echo hello; sleep 2; done"

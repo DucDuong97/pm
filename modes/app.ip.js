@@ -12,29 +12,26 @@ const httpsAgent = new https.Agent({
 })
 
 const execute = function(job_context, dataCb, errCb, succCb, failCb, finalCb){
-    console.log('Sending HTTP: '+`https://${process.env.HTTP_URL}/${job_context.app}/.queue/${job_context.worker}`);
+    console.log('Sending external HTTP...');
+    console.log(`https://${job_context.hostname}/${job_context.app}/.queue/${job_context.worker}`);
 
     var bodyFormData = new FormData();
-    bodyFormData.append('__utoken', process.env.UTOKEN);
+    bodyFormData.append('__utoken', process.env.EXTERNAL_TOKEN);
     bodyFormData.append('data', job_context.msg);
+
+
+    var hostile = require('hostile')
+    hostile.set(job_context.ip, job_context.hostname);
 
     axios({
         method: 'post',
-        url: `https://${process.env.HTTP_URL}/${job_context.app}/.queue/${job_context.worker}`,
+        url: `https://${job_context.hostname}/${job_context.app}/.queue/${job_context.worker}`,
         data: bodyFormData,
         httpsAgent: httpsAgent,
     })
     .then(res => {
         const data = res.data;
         console.log('Data: ', data);
-
-        if (typeof data === 'str'){
-            console.log("[x] Uncaught error");
-            errCb(data);
-            failCb();
-            finalCb();
-        }
-
         dataCb(data.data);
         if (data && data.code == 1){
             succCb();
@@ -42,12 +39,26 @@ const execute = function(job_context, dataCb, errCb, succCb, failCb, finalCb){
         if (!data || data.code != 1){
             failCb();
         }
+        hostile.remove(job_context.ip, job_context.hostname, function (err) {
+            if (err) {
+              console.error(err)
+            } else {
+              console.log('remove /etc/hosts successfully!')
+            }
+          });
         finalCb();
     })
     .catch(err => {
         console.log("[x] Connection error");
         errCb(err);
         failCb();
+        hostile.remove(job_context.ip, job_context.hostname, function (err) {
+            if (err) {
+              console.error(err)
+            } else {
+              console.log('remove /etc/hosts successfully!')
+            }
+          });
         finalCb();
     });
 };

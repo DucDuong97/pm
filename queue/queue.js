@@ -4,7 +4,8 @@ const asyncAmqp = require('amqplib');
 
 const RetryUtils = require('./retry');
 
-exports._initChannel = (callback) => {	
+exports._initChannel = (callback) => {
+	console.log(`Connect to RBMQ: ${process.env.AMQP_URL}`);
 
 	amqp.connect(process.env.AMQP_URL, function(error0, connection) {
 		if (error0) {
