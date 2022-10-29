@@ -1,9 +1,9 @@
 
+require('../../utils/load.env');
+
 console.log('~');
 console.log(`HTTP URL: ${process.env.HTTP_URL}`);
 console.log('Deploying work queue http...');
-
-require('../../utils/load.env');
 
 /**
  * Handle input arguments
@@ -12,7 +12,7 @@ var args = process.argv.slice(2);
 
 const app = args[0];
 const worker = args[1];
-const queue = `worker.${app}.${worker}.http`;
+const queue = `worker.${app}.${worker}`;
 
 /**
  * Graceful shutdown

@@ -9,8 +9,8 @@ exports.writeLog = (log, queue) => {
 	let log_dir = `${path.dirname(__dirname)}/logs`;
 	if (!fs.existsSync(log_dir)){
 		fs.mkdirSync(log_dir);
-	}
-	let logs_dir = `${log_dir}/${queue}.log`;
+	} 
+	let logs_dir = `${log_dir}/${queue.replace('/', '#')}.log`;
 	let datetime = new Date().toLocaleString('en-US', {
 			timeZone: 'Asia/Bangkok'
 	});

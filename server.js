@@ -1,17 +1,18 @@
 
-const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkersList, getWorkerData } = require('./pm-control.js');
+const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkerData } = require('./pm-control.js');
 const { app_worker_config, service_worker_config, ip_worker_config } = require('./platform.js');
 const { initEntryEx, deleteEntryEx } = require('./queue/pubsub');
 const { initChannel } = require('./queue/queue');
 
-require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
+require('./utils/load.env');
 
 const app = require("express")();
 
-app.use(require("body-parser").urlencoded({ extended: false }));
+app.use(require("body-parser").urlencoded({ extended: true }));
+app.use(require("body-parser").json());
 
 app.get("/url", (req, res) => {
-	res.json(["support http"]);
+	res.json(["heelo world"]);
 });
 
 app.post("/start-worker", (req, res) => {
@@ -121,7 +122,7 @@ app.get("/worker-logs/:worker_name", (req, res) => {
 
 	const { spawn } = require('child_process');
 	const child = spawn('pm2', [
-		'logs', '--lines', '100', '--nostream', worker
+		'list',
 	]);
     child.stdout.on('data', (data) => {
         console.log(`Get logs...`);
@@ -149,6 +150,9 @@ app.get("/worker-logs/:worker_name", (req, res) => {
 			success: false,
 		});
     });
+	child.on('error', (err) => {
+		console.error(`Backend error: ${err}`);
+	})
 });
 
 app.post("/stop-worker", (req, res) => {
@@ -275,8 +279,45 @@ app.get("/describe-queue/:queue_name", (req, res) => {
 	});
 });
 
-app.get("/list", (req, res) => {
-	getWorkersList((err,list) => res.json(list));
+
+app.post("/modify-host", (req, res) => {
+	
+	console.log("Setting host...");
+
+	// if (process.env.NODE_ENV != 'local'){
+	// 	return;
+	// }
+
+	let ip   = req.body.ip;
+	let hostname = req.body.hostname;
+	let action = req.body.action;
+
+	console.log(`Host ${hostname}, IP ${ip}`);
+		
+	const hostile = require('hostile');
+
+	if (action === 'set'){
+		var err = hostile.set(ip, hostname);
+	
+		if (err){
+			res.sendStatus(500);
+			console.log(err);
+			console.log(`Set host failure`);
+			return;
+		}
+	} else {	
+		var success = hostile.remove(ip, hostname);
+	
+		if (!success){
+			res.sendStatus(500);
+			console.log(err);
+			console.log(`Set host failure`);
+			return;
+		}
+	}
+
+	console.log(`Set host Successful`);
+	res.sendStatus(200);
 });
 
 

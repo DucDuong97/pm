@@ -17,10 +17,9 @@ services:
       - /home/trueroot:/home/trueroot
     environment:
       NODE_ENV: local
-      SUCCESS_ROOT: /home/trueroot/success
       AMQP_URL: amqp://rabbitmq:5672
     ports:
-      - "3001:3000"
+      - "3000:3000"
     extra_hosts:
       - "true.success.beta:host-gateway"
     networks:
