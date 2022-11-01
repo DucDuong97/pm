@@ -14,14 +14,14 @@ services:
     build: .
     container_name: worker-management
     volumes:
-      - /home/trueroot:/home/trueroot
+      - ./logs:/home/node/worker-mngt/logs
     environment:
       NODE_ENV: local
       AMQP_URL: amqp://rabbitmq:5672
     ports:
       - "3000:3000"
     extra_hosts:
-      - "true.success.beta:host-gateway"
+      - "true.success.duc:host-gateway"
     networks:
       - worker-rabbitmq
       #command: bash -c "while true; do echo hello; sleep 2; done"

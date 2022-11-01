@@ -126,11 +126,10 @@ app.get("/worker-logs/:worker_name", (req, res) => {
 	]);
     child.stdout.on('data', (data) => {
         console.log(`Get logs...`);
-        console.log(data);
         result += data;
     });
     child.stderr.on('data', (data) => {
-        console.log(`Get logs errors...`);
+        console.log(`ERROR...`);
         console.log(data);
     });
 	child.on('exit', function (code, signal) {
@@ -284,9 +283,10 @@ app.post("/modify-host", (req, res) => {
 	
 	console.log("Setting host...");
 
-	// if (process.env.NODE_ENV != 'local'){
-	// 	return;
-	// }
+	// NOT FOR PRODUCTION
+	if (process.env.NODE_ENV == 'production' || process.env.NODE_ENV == 'staging' ){
+		return;
+	}
 
 	let ip   = req.body.ip;
 	let hostname = req.body.hostname;
