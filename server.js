@@ -17,23 +17,22 @@ app.get("/url", (req, res) => {
 
 app.post("/start-worker", (req, res) => {
 
-	let app_name = req.body.app_name;
-	let service_name = req.body.service_name;
+	let app_name		= req.body.app_name;
 
-	let worker   = req.body.worker_name;
-	let amount   = req.body.amount;
+	let worker   		= req.body.worker_name;
+	let amount   		= req.body.amount;
 
-	let type     = req.body.type;
-	let topic    = req.body.topic;
+	let type     		= req.body.type;
+	let topic    		= req.body.topic;
 
-	let mode     = req.body.mode;
-	let ip     = req.body.ip;
-	let hostname     = req.body.hostname;
-
-	console.log("type ", type);
+	let mode     		= req.body.mode;
 
 	if (type.startsWith('ip.')){
-		console.log(`Starting IP worker: ${service_name}.${worker} ...`);
+
+		let ip     			= req.body.ip;
+		let hostname     	= req.body.hostname;
+
+		console.log(`Starting IP worker: ${app_name}.${worker} ...`);
 		console.log(`With type: ${type}`);
 		console.log(`With mode: ${mode}`);
 	
@@ -53,6 +52,8 @@ app.post("/start-worker", (req, res) => {
 			res.json(result);
 		});
 	} else if (type.startsWith('external.')){
+		let service_name 	= req.body.service_name;
+
 		console.log(`Starting service worker: ${service_name}.${worker} ...`);
 		console.log(`With type: ${type}`);
 		console.log(`With mode: ${mode}`);
@@ -122,7 +123,7 @@ app.get("/worker-logs/:worker_name", (req, res) => {
 
 	const { spawn } = require('child_process');
 	const child = spawn('pm2', [
-		'list',
+		'logs', '--lines', '100', '--nostream', worker
 	]);
     child.stdout.on('data', (data) => {
         console.log(`Get logs...`);
@@ -219,21 +220,21 @@ app.post("/delete-topic", (req, res) => {
 
 	let app = req.body.app_name;
 	let topic   = req.body.topic_name;
+
+	let result = {};
 	
 	initChannel(async (channel) => {
-		let result = {};
-
 		deleteEntryEx(channel, `topic.${app}.${topic}`);
-		
-		if (false) {
-			result.success = false;
-			result.err_msg = err;
-		} else {
-			result.success = true;
-		}
-
+	}).then(_ => {
+		console.log(`Deleting topic topic.${app}.${topic} successfully!`);
+		result.success = true;
 		res.json(result);
-	});
+	}).catch(err => {
+		console.log(`Deleting topic topic.${app}.${topic} failed!`);
+		result.success = false;
+		result.err_msg = err;
+		res.json(result);
+	});;
 });
 
 app.get("/describe-worker/:worker_name", (req, res) => {
@@ -250,6 +251,23 @@ app.get("/describe-worker/:worker_name", (req, res) => {
 			result.amount = worker.length;
 			result.worker = worker;
 		}
+		res.json(result);
+	});
+});
+
+app.get("/describe-topic/:topic_name", (req, res) => {
+	console.log(`Describe topic: ${req.params.topic_name} ...`);
+
+	let result = {};
+
+	initChannel(async (channel) => {
+		channel.checkExchange(req.params.topic_name);
+	}).then(_ => {
+		result.success = true;
+		res.json(result);
+	}).catch(err => {
+		result.success = false;
+		result.err_msg = err;
 		res.json(result);
 	});
 });
