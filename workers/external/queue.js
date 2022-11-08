@@ -30,7 +30,7 @@ const QueueUtils = require('../../queue/queue');
 
 QueueUtils.initChannel(async (channel) => {
 	const q = await QueueUtils.initQueue(channel, queue);
-	const { retry_ex, _ } = await QueueUtils.initRetryEx(channel, q);
+	const retry_ex = await QueueUtils.initRetryEx(channel, q);
 
 	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", queue);
 	
@@ -49,7 +49,7 @@ QueueUtils.initChannel(async (channel) => {
 			(data) => dataOutput(data, queue),
 			(data) => errorOutput(data, queue),
 			() => QueueUtils.onSuccess(channel, msg),
-			() => QueueUtils.onFailure(channel, msg, retry_ex, queue),
+			() => QueueUtils.onFailure(channel, msg, retry_ex, q),
 			() => graceful.stop()
 		);
 	}, {

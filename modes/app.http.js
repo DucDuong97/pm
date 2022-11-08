@@ -33,14 +33,21 @@ const execute = function(job_context, dataCb, errCb, succCb, failCb, finalCb){
             errCb(data);
             failCb();
             finalCb();
+            return;
         }
 
         dataCb(data.data);
         if (data && data.code == 1){
-            succCb();
+            if (data.message == "error.retriable"){
+                failCb();
+            } else {
+                succCb();
+            }
         }
         if (!data || data.code != 1){
-            failCb();
+            console.log("[x] Uncaught error");
+            errCb(data.message);
+            succCb();
         }
         finalCb();
     })

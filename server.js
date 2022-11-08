@@ -11,8 +11,10 @@ const app = require("express")();
 app.use(require("body-parser").urlencoded({ extended: true }));
 app.use(require("body-parser").json());
 
-app.get("/url", (req, res) => {
-	res.json(["heelo world"]);
+app.get("/ping", (req, res) => {
+	res.json({
+		status: "ok",
+	});
 });
 
 app.post("/start-worker", (req, res) => {

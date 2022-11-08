@@ -35,7 +35,7 @@ QueueUtils.initChannel(async (channel) => {
 
 	// init queue, exchange and binding
 	const q = await initTempQueue(channel, entry_ex);
-	const { retry_ex } = await initRetryEx(channel, q.queue);
+	const retry_ex = await initRetryEx(channel, q.queue);
 
 	console.log('pubsub to queue:', q.queue);
 	console.log('Listen from topic:', topic);
@@ -58,7 +58,7 @@ QueueUtils.initChannel(async (channel) => {
 			(data) => dataOutput(data, topic),
 			(data) => errorOutput(data, topic),
 			() => QueueUtils.onSuccess(channel, msg),
-			() => QueueUtils.onFailure(channel, msg, retry_ex, q.queue),
+			() => QueueUtils.onFailure(channel, msg, retry_ex, q),
 			() => graceful.stop()
 		);
 	}, {

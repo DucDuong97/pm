@@ -2,7 +2,8 @@
 const amqp = require('amqplib/callback_api');
 const asyncAmqp = require('amqplib');
 
-const RetryUtils = require('./retry');
+const BASIC_RETRY_DELAY = process.env.BASIC_RETRY_DELAY || 1000;
+const MAX_RETRIES = process.env.MAX_RETRIES || 2;
 
 exports._initChannel = (callback) => {
 	console.log(`Connect to RBMQ: ${process.env.AMQP_URL}`);
@@ -90,8 +91,7 @@ exports.initChannel = async (cb) => {
  * Therefore MUST not change
  * 
  * @param {asyncAmqp.Channel} channel 
- * @param {String} queue_name 
- * @param {Boolean} temp - queue is temporary or not 
+ * @param {String} queue_name
  * @return {queue}
  */
 exports.initQueue = async (channel, queue_name) => {
@@ -111,56 +111,83 @@ exports.initQueue = async (channel, queue_name) => {
  */
 exports.initRetryEx = async (channel, q) => {
 	try {
-		const entry_ex = await channel.assertExchange('entry.exchange', 'direct', {
+
+		const entry_ex = await channel.assertExchange('requeue.exchange', 'direct', {
 			durable: true,
-			autoDelete: true,
+			autoDelete: false,
 		});
-		
 		const retry_ex = await channel.assertExchange('retry.exchange', 'direct', {
 			durable: true,
-			autoDelete: true,
+			autoDelete: false,
 		});
-		const dead_queue = await channel.assertQueue('dead.letter.queue', {
+
+		const dead_q = await channel.assertQueue(`${q.queue}.dead.letter`, {
 			durable: true,
 			autoDelete: false
 		});
-		const retry_q = await channel.assertQueue('retry.queue', {
+		const retry_q = await channel.assertQueue(`${q.queue}.retry`, {
 			durable: true, autoDelete: false,
 			arguments: {
-				'x-dead-letter-exchange': 'entry.exchange',
+				'x-dead-letter-exchange': 'requeue.exchange',
 			}
 		});
 
 		// bind
-		channel.bindQueue(dead_queue.queue, retry_ex.exchange, 'retry.fail');
-
-		channel.bindQueue(q.queue, entry_ex.exchange, q.queue);
+		channel.bindQueue(dead_q.queue, retry_ex.exchange, `${q.queue}.retry.fail`);
 		channel.bindQueue(retry_q.queue, retry_ex.exchange, q.queue);
 
-		return {
-			retry_ex,
-			dead_queue,
-			retry_q
-		}
+		channel.bindQueue(q.queue, entry_ex.exchange, q.queue);
+
+		return retry_ex;
 
 	} catch (err){
 		throw err;
 	}
 	
-}
+};
 
 exports.onSuccess = (channel, msg) => {
 	console.log(" [x] Done");
 	channel.ack(msg);
 }
 
-exports.onFailure = async (channel, msg, retry_ex, queue) => {
-	
-	const retryUtils = new RetryUtils(msg);
+exports.onFailure = async (channel, msg, retry_ex, q) => {
 	
 	console.log(" [x] Execution fail");
-	// ack, worker explicitly send failed msg to retry queue
 	channel.ack(msg);
-	// retry
-	retryUtils.retry(channel, retry_ex, queue);
+
+	if (!msg.properties.headers){
+		msg.properties.headers = {};
+	}
+	if (!msg.properties.headers['x-retries']){
+		msg.properties.headers['x-retries'] = 0;
+	}
+	
+	const retry_count = this.msg.properties.headers['x-retries'];
+	const next_delay = (retry_count + 1) * BASIC_RETRY_DELAY;
+	
+	if (retry_count < MAX_RETRIES){
+		// Retry mechanism
+		console.log(` [x] Publishing to ${retry_ex.exchange}, routing key ${q.queue} with ${next_delay/1000}s delay`);
+		
+		const msg_options = {
+			expiration: next_delay,
+			headers: {
+				'x-retries': retry_count + 1,
+				'retry-reason': reason
+			}
+		};
+		channel.publish(retry_ex.exchange, q.queue, Buffer.from(this.msg.content), msg_options);
+	} else {
+		// send to dead letter queue
+		console.log(` [x] Worker fail processing task`)
+		console.log(` [x] Retry exceed limit (${MAX_RETRIES}). Message sent to '${q.queue}.dead.letter'!`);
+		
+		const msg_options = {
+			headers: {
+				'retry-reason': reason
+			}
+		};
+		channel.publish(retry_ex.exchange, `${q.queue}.retry.fail`, Buffer.from(this.msg.content), msg_options);
+	}
 }
