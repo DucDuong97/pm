@@ -10,7 +10,7 @@ exports.writeLog = (log, queue) => {
 	if (!fs.existsSync(log_dir)){
 		fs.mkdirSync(log_dir);
 	} 
-	let logs_dir = `${log_dir}/${queue.replace('/', '#')}.log`;
+	let log_path = `${log_dir}/${queue.replace('/', '#')}.log`;
 	let datetime = new Date().toLocaleString('en-US', {
 			timeZone: 'Asia/Bangkok'
 	});
@@ -18,12 +18,12 @@ exports.writeLog = (log, queue) => {
 	console.log(content + '\n');
 
 	// Write log to file
-	fs.writeFileSync(logs_dir, content,{
+	fs.writeFileSync(log_path, content,{
 		encoding: "utf8",
-		flag: "a",
+		flag: "a+",
 	}, function (err) {
 		if (err){
 			console.log("Cannot log!");
 		}
 	});
-}
+};

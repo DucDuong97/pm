@@ -13,8 +13,9 @@ RUN npm install && mkdir logs
 RUN npm install pm2 -g
 
 COPY ./src/ ./src/
-ADD ./config.${ENV}.env ./
 ADD ./cert/ ./cert/
+
+ADD ./config.${ENV}.env ./
 
 EXPOSE 3000
 
