@@ -7,8 +7,7 @@ On development phase, it is recommended to build without docker.
 4. PM2: https://pm2.keymetrics.io/docs/usage/quick-start/
 
 # How to build with docker
-1. In docker-compose.yml on line 20, replace trueroot with actual trueroot on server.
-2. docker-compose up --build
+2. docker-compose up --build -d
 
 # Connection test
 localhost:3000/url
