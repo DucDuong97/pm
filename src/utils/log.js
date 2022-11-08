@@ -6,7 +6,7 @@ const path = require("path");
  * @desc Write data to log
  */
 exports.writeLog = (log, queue) => {
-	let log_dir = `${path.dirname(__dirname)}/logs`;
+	let log_dir = `${path.dirname(path.dirname(__dirname))}/logs`;
 	if (!fs.existsSync(log_dir)){
 		fs.mkdirSync(log_dir);
 	} 

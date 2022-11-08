@@ -2,12 +2,15 @@
 const axios = require('axios');
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 var FormData = require('form-data');
+
+const cert_dir = path.dirname(path.dirname(__dirname))+"/cert";
 
 const httpsAgent = new https.Agent({
 	rejectUnauthorized: false, // (NOTE: this will disable client verification)
-	cert: fs.readFileSync(require("path").dirname(__dirname)+"/cert/success.crt"),
-	key:  fs.readFileSync(require("path").dirname(__dirname)+"/cert/success.key"),
+	cert: fs.readFileSync(cert_dir+"/success.crt"),
+	key:  fs.readFileSync(cert_dir+"/success.key"),
 	passphrase: "YYY"
 })
 

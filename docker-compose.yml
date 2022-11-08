@@ -11,10 +11,15 @@ services:
        - worker-rabbitmq
 
   worker-management:
-    build: .
+    build: 
+      context: .
+      args:
+        - ENV=local
+      dockerfile: Dockerfile
     container_name: worker-management
     volumes:
       - ./logs:/home/node/worker-mngt/logs
+      - ./src:/home/node/worker-mngt/src
     environment:
       NODE_ENV: local
       AMQP_URL: amqp://rabbitmq:5672
@@ -24,12 +29,8 @@ services:
       - "true.success.duc:host-gateway"
     networks:
       - worker-rabbitmq
-      #command: bash -c "while true; do echo hello; sleep 2; done"
-      #command: bash -c "node server.json" 
 
 networks:
   worker-rabbitmq:
     driver: bridge
     name: worker-rabbitmq
-
-

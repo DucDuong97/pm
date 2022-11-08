@@ -1,5 +1,5 @@
 
-const { startWorkers, restartWorkers, stopWorker, deleteWorker, getWorkerData } = require('./pm-control.js');
+const pm = require('./utils/pm');
 const { app_worker_config, service_worker_config, ip_worker_config } = require('./platform.js');
 const { initEntryEx, deleteEntryEx } = require('./queue/pubsub');
 const { initChannel } = require('./queue/queue');
@@ -42,7 +42,7 @@ app.post("/start-worker", (req, res) => {
 
 		type = type.replace("ip.", "");
 	
-		startWorkers(ip_worker_config(app_name, worker, amount, type, mode, ip, hostname, topic), (err, apps) => {
+		pm.startWorkers(ip_worker_config(app_name, worker, amount, type, mode, ip, hostname, topic), (err, apps) => {
 			if (err) {
 				result.success = false;
 				result.err_msg = err;
@@ -64,7 +64,7 @@ app.post("/start-worker", (req, res) => {
 
 		type = type.replace("external.", "");
 	
-		startWorkers(service_worker_config(service_name, worker, amount, type, mode, address, topic), (err, apps) => {
+		pm.startWorkers(service_worker_config(service_name, worker, amount, type, mode, address, topic), (err, apps) => {
 			if (err) {
 				result.success = false;
 				result.err_msg = err;
@@ -82,7 +82,7 @@ app.post("/start-worker", (req, res) => {
 	
 		let result = {};
 	
-		startWorkers(app_worker_config(app_name, worker, amount, type, mode, topic), (err, apps) => {
+		pm.startWorkers(app_worker_config(app_name, worker, amount, type, mode, topic), (err, apps) => {
 			if (err) {
 				result.success = false;
 				result.err_msg = err;
@@ -103,7 +103,7 @@ app.post("/restart-worker", (req, res) => {
 
 	let result = {};
 
-	restartWorkers(worker, (err, apps) => {
+	pm.restartWorkers(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -164,7 +164,7 @@ app.post("/stop-worker", (req, res) => {
 
 	let result = {};
 
-	stopWorker(worker, (err, apps) => {
+	pm.stopWorker(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -183,7 +183,7 @@ app.post("/delete-worker", (req, res) => {
 
 	let result = {};
 
-	deleteWorker(worker, (err, apps) => {
+	pm.deleteWorker(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -244,7 +244,7 @@ app.get("/describe-worker/:worker_name", (req, res) => {
 
 	let result = {};
 
-	getWorkerData(req.params.worker_name, (err, worker) => {
+	pm.getWorkerData(req.params.worker_name, (err, worker) => {
 		if (err) {
 			result.found = false;
 			result.err_msg = err;

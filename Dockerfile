@@ -1,6 +1,8 @@
 
 FROM node:16-alpine
 
+ARG ENV
+
 # Create and move to workdir
 WORKDIR /home/node/worker-mngt
 
@@ -10,8 +12,10 @@ RUN npm install && mkdir logs
 
 RUN npm install pm2 -g
 
-COPY . .
+COPY ./src/ ./src/
+ADD ./config.${ENV}.env ./
+ADD ./cert/ ./cert/
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]
