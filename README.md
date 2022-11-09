@@ -7,7 +7,9 @@ On development phase, it is recommended to build without docker.
 4. PM2: https://pm2.keymetrics.io/docs/usage/quick-start/
 
 # How to build with docker
-2. docker-compose up --build -d
+```
+docker-compose up --build -d
+```
 
 # Connection test
-localhost:3000/url
+localhost:3000/ping
