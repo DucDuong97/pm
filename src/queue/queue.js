@@ -48,7 +48,7 @@ class Queue {
 		const retry_q = await channel.assertQueue(`${q.queue}.retry`, {
 			durable: true, autoDelete: false,
 			arguments: {
-				'x-dead-letter-exchange': 'requeue.exchange',
+				'x-dead-letter-exchange': REQUEUE_EX,
 			}
 		});
 		const exceed_q = await channel.assertQueue(`${q.queue}.retries.exceed`, {
@@ -65,7 +65,7 @@ class Queue {
 		channel.bindQueue(exceed_q.queue, RETRY_EX, exceed_q.queue);
 		channel.bindQueue(dead_q.queue,   RETRY_EX, dead_q.queue);
 
-		channel.bindQueue(q.queue, REQUEUE_EX, q.queue);
+		channel.bindQueue(q.queue, REQUEUE_EX, retry_q.queue);
 
 		cb(new Queue({
 
@@ -73,7 +73,7 @@ class Queue {
 			
 			queue: q.queue,
 			
-			retry_key: dead_q.queue,
+			retry_key: retry_q.queue,
 			dead_key: dead_q.queue,
 			exceed_key: exceed_q.queue
 		}));
@@ -105,13 +105,8 @@ class Queue {
 	failure(msg){
 		console.log(" [x] Execution failed!!");
 		console.log(` [x] Message sent to '${this.dead_key}'!`);
-		
-		const msg_options = {
-			headers: {
-				'failure-reason': msg.reason
-			}
-		};
-		this.channel.publish(RETRY_EX, this.dead_key, Buffer.from(msg.content), msg_options);
+
+		this.channel.publish(RETRY_EX, this.dead_key, Buffer.from(msg.content));
 	}
 
 	retry(msg){
@@ -127,15 +122,14 @@ class Queue {
 		const next_delay = (retry_count + 1) * BASIC_RETRY_DELAY;
 		
 		if (retry_count < MAX_RETRIES){
-			console.log(" [x] Retrying...");
 			// Retry mechanism
+			console.log(" [x] Retrying...");
 			console.log(` [x] Publishing to ${RETRY_EX}, routing key ${this.retry_key} with ${next_delay/1000}s delay`);
 			
 			const msg_options = {
 				expiration: next_delay,
 				headers: {
-					'x-retries': retry_count + 1,
-					'retry-reason': reason
+					'x-retries': retry_count + 1
 				}
 			};
 			this.channel.publish(RETRY_EX, this.retry_key, Buffer.from(msg.content), msg_options);
@@ -144,12 +138,7 @@ class Queue {
 			console.log(` [x] Retry times exceeds`)
 			console.log(` [x] Retry exceed limit (${MAX_RETRIES}). Message sent to '${this.exceed_key}'!`);
 			
-			const msg_options = {
-				headers: {
-					'retry-reason': reason
-				}
-			};
-			this.channel.publish(RETRY_EX, this.exceed_key, Buffer.from(msg.content), msg_options);
+			this.channel.publish(RETRY_EX, this.exceed_key, Buffer.from(msg.content));
 		}
 	}
 }

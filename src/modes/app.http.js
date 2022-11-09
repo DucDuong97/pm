@@ -48,11 +48,12 @@ const execute = function(job_context, dataCb, errCb, succCb, failCb, retryCb, fi
         }
         if (!data || data.code != 1){
             console.log("[x] Uncaught error");
-            errCb(data.data);
             
             if (data.message == "error.retriable"){
+                errCb(`Retry with message: ${data.data}`);
                 retryCb();
             } else {
+                errCb(data.data);
                 failCb();
             }
         }
