@@ -11,22 +11,12 @@ services:
        - worker-rabbitmq
 
   worker-management:
+    container_name: worker-management
     build: 
       context: .
-      args:
-        - ENV=local
       dockerfile: Dockerfile
-    container_name: worker-management
-    volumes:
-      - ./logs:/home/node/worker-mngt/logs
-      - ./src:/home/node/worker-mngt/src
-    environment:
-      NODE_ENV: local
-      AMQP_URL: amqp://rabbitmq:5672
     ports:
       - "3000:3000"
-    extra_hosts:
-      - "true.success.duc:host-gateway"
     networks:
       - worker-rabbitmq
 

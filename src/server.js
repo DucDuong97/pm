@@ -1,20 +1,30 @@
 
-const pm = require('./utils/pm');
+/**
+ * Load environment
+ */
+ require('dotenv').config();
+
+/**
+ * Load deps
+ */
+const ProcessManager = require('./utils/pm');
 const { app_worker_config, service_worker_config, ip_worker_config } = require('./platform.js');
-const { initEntryEx, deleteEntryEx } = require('./queue/pubsub');
-const { initChannel } = require('./queue/queue');
+const Pubsub = require('./brokers/rabbitmq/pubsub');
+const Queue = require('./brokers/rabbitmq/queue');
 
-require('./utils/load.env');
-
+/**
+ * Init express server
+ */
 const app = require("express")();
 
 app.use(require("body-parser").urlencoded({ extended: true }));
 app.use(require("body-parser").json());
 
+/**
+ * Init request handler
+ */
 app.get("/ping", (req, res) => {
-	res.json({
-		status: "ok",
-	});
+	res.send("pong");
 });
 
 app.post("/start-worker", (req, res) => {
@@ -42,7 +52,7 @@ app.post("/start-worker", (req, res) => {
 
 		type = type.replace("ip.", "");
 	
-		pm.startWorkers(ip_worker_config(app_name, worker, amount, type, mode, ip, hostname, topic), (err, apps) => {
+		ProcessManager.startWorkers(ip_worker_config(app_name, worker, amount, type, mode, ip, hostname, topic), (err, apps) => {
 			if (err) {
 				result.success = false;
 				result.err_msg = err;
@@ -64,7 +74,7 @@ app.post("/start-worker", (req, res) => {
 
 		type = type.replace("external.", "");
 	
-		pm.startWorkers(service_worker_config(service_name, worker, amount, type, mode, address, topic), (err, apps) => {
+		ProcessManager.startWorkers(service_worker_config(service_name, worker, amount, type, mode, address, topic), (err, apps) => {
 			if (err) {
 				result.success = false;
 				result.err_msg = err;
@@ -82,7 +92,7 @@ app.post("/start-worker", (req, res) => {
 	
 		let result = {};
 	
-		pm.startWorkers(app_worker_config(app_name, worker, amount, type, mode, topic), (err, apps) => {
+		ProcessManager.startWorkers(app_worker_config(app_name, worker, amount, type, mode, topic), (err, apps) => {
 			if (err) {
 				result.success = false;
 				result.err_msg = err;
@@ -103,7 +113,7 @@ app.post("/restart-worker", (req, res) => {
 
 	let result = {};
 
-	pm.restartWorkers(worker, (err, apps) => {
+	ProcessManager.restartWorkers(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -164,7 +174,7 @@ app.post("/stop-worker", (req, res) => {
 
 	let result = {};
 
-	pm.stopWorker(worker, (err, apps) => {
+	ProcessManager.stopWorker(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -183,7 +193,7 @@ app.post("/delete-worker", (req, res) => {
 
 	let result = {};
 
-	pm.deleteWorker(worker, (err, apps) => {
+	ProcessManager.deleteWorker(worker, (err, apps) => {
 		if (err) {
 			result.success = false;
 			result.err_msg = err;
@@ -198,45 +208,28 @@ app.post("/delete-worker", (req, res) => {
 app.post("/create-topic", (req, res) => {
 	console.log("Creating topic...");
 
-	let app = req.body.app_name;
-	let topic   = req.body.topic_name;
+	let app   = req.body.app_name;
+	let topic = req.body.topic_name;
+	let type  = req.body.topic_type;
 
-	initChannel(async (channel) => {
-		let result = {};
-
-		initEntryEx(channel, `topic.${app}.${topic}`);
-
-		if (false) {
-			result.success = false;
-			result.err_msg = err;
-		} else {
-			result.success = true;
-		}
-
-		res.json(result);
-	});
+	let result = {};
+	Pubsub.initEntryEx(`topic.${app}.${topic}`, type);
+	result.success = true;
+	res.json(result);
 });
 
 app.post("/delete-topic", (req, res) => {
 	console.log("Deleting topic...");
 
-	let app = req.body.app_name;
-	let topic   = req.body.topic_name;
+	let app   = req.body.app_name;
+	let topic = req.body.topic_name;
 
 	let result = {};
 	
-	initChannel(async (channel) => {
-		deleteEntryEx(channel, `topic.${app}.${topic}`);
-	}).then(_ => {
-		console.log(`Deleting topic topic.${app}.${topic} successfully!`);
-		result.success = true;
-		res.json(result);
-	}).catch(err => {
-		console.log(`Deleting topic topic.${app}.${topic} failed!`);
-		result.success = false;
-		result.err_msg = err;
-		res.json(result);
-	});;
+	Pubsub.deleteEntryEx(`topic.${app}.${topic}`);
+	console.log(`Deleting topic topic.${app}.${topic} successfully!`);
+	result.success = true;
+	res.json(result);
 });
 
 app.get("/describe-worker/:worker_name", (req, res) => {
@@ -244,7 +237,7 @@ app.get("/describe-worker/:worker_name", (req, res) => {
 
 	let result = {};
 
-	pm.getWorkerData(req.params.worker_name, (err, worker) => {
+	ProcessManager.getWorkerData(req.params.worker_name, (err, worker) => {
 		if (err) {
 			result.found = false;
 			result.err_msg = err;
@@ -262,12 +255,15 @@ app.get("/describe-topic/:topic_name", (req, res) => {
 
 	let result = {};
 
-	initChannel(async (channel) => {
-		channel.checkExchange(req.params.topic_name);
-	}).then(_ => {
-		result.success = true;
-		res.json(result);
-	}).catch(err => {
+	Pubsub.initChannel(async (channel) => {
+		try {
+			await channel.checkExchange(req.params.topic_name);
+			result.success = true;
+			res.json(result);
+		} catch(_){
+
+		}
+	}, (err) => {
 		result.success = false;
 		result.err_msg = err;
 		res.json(result);
@@ -298,7 +294,9 @@ app.get("/describe-queue/:queue_name", (req, res) => {
 	});
 });
 
-
+/**
+ * @Deprecated
+ */
 app.post("/modify-host", (req, res) => {
 	
 	console.log("Setting host...");
@@ -341,6 +339,6 @@ app.post("/modify-host", (req, res) => {
 });
 
 
-app.listen(process.env.PORT, () => {
-	console.log("Server running on port " + process.env.PORT);
+app.listen(process.env.SERVER_PORT, () => {
+	console.log("Server running on port " + process.env.SERVER_PORT);
 });

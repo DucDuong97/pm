@@ -15,8 +15,6 @@ RUN npm install pm2 -g
 COPY ./src/ ./src/
 ADD ./cert/ ./cert/
 
-ADD ./config.${ENV}.env ./
-
 EXPOSE 3000
 
 CMD ["node", "src/server.js"]

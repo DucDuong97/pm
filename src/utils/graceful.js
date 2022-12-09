@@ -1,8 +1,8 @@
 class GracefulUtils {
-	//
 
-	constructor(){
+	constructor(cb){
         this.running = false;
+        this.cb = cb;
 	}
 
     run(){
@@ -25,6 +25,7 @@ class GracefulUtils {
                         console.log('GRACEFUL SHUTDOWN: a process is still running. Sleep...');
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
+                    this.cb();
                     console.log('GRACEFUL SHUTDOWN: successful');
                     process.exit(0);
                 });

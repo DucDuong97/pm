@@ -3,11 +3,15 @@ console.log('~');
 console.log(`HTTP URL: ${process.env.HTTP_URL}`);
 console.log('Deploying pubsub queue http...');
 
-require('../../utils/load.env');
+/**
+ * Load environment
+ */
+require('dotenv').config();
 
-const QueueUtils = require('../../queue/queue');
-const { initEntryEx, initTempQueue, initRetryEx } = require('../../queue/pubsub');
-const { errorOutput, dataOutput } = require('../../utils/output')
+/**
+ * Load ROOT DIR
+ */
+const root = require("app-root-path");
 
 /**
  * Handle input arguments
@@ -17,51 +21,50 @@ var args = process.argv.slice(2);
 const app = args[0];
 const worker = args[1];
 const topic = args[2];
-
-/**
- * Graceful shutdown
- */
-const GracefulUtils = require('../../utils/graceful');
-const graceful = new GracefulUtils();
-graceful.graceful();
+const topic_type = args[3];
 
 /**
  * Init consumer
  */
-QueueUtils.initChannel(async (channel) => {
+const { errorOutput, dataOutput } = require(`${root}/utils/output`)
 
-	// declare entry exchange
-	const entry_ex = await initEntryEx(channel, topic)
+const Pubsub = require(`${root}/brokers/rabbitmq/pubsub`);
 
-	// init queue, exchange and binding
-	const q = await initTempQueue(channel, entry_ex);
-	const retry_ex = await initRetryEx(channel, q.queue);
+Pubsub.build(topic, topic_type, (queue_utils) => {
 
-	console.log('pubsub to queue:', q.queue);
 	console.log('Listen from topic:', topic);
-	
 	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", topic);
-	
-	await channel.consume(q.queue, function(msg){
 
-		console.log('\n*******');
+	/**
+	 * Graceful shutdown
+	 */
+	const GracefulUtils = require(`${root}/utils/graceful`);
+	const graceful = new GracefulUtils(() => {
+		Pubsub.destruct();
+	});
+	graceful.graceful();
+
+	/**
+	 * Define consumer
+	 */
+	queue_utils.consume((msg) => {
+		console.log('\n~');
 		console.log(`[->] Receive message: ${msg.content.toString()}`);
 
 		graceful.run();
 
-		require('../../modes/app.http')(
+		require(`${root}/modes/app.http`)(
 			{
 				app: app,
 				worker: worker,
 				msg: msg.content.toString(),
 			},
-			(data) => dataOutput(data, topic),
-			(data) => errorOutput(data, topic),
-			() => QueueUtils.onSuccess(channel, msg),
-			() => QueueUtils.onFailure(channel, msg, retry_ex, q),
+			(data) => dataOutput(data, queue),
+			(data) => errorOutput(data, queue),
+			() => queue_utils.success(msg),
+			() => queue_utils.failure(msg),
+			() => queue_utils.retry(msg),
 			() => graceful.stop()
 		);
-	}, {
-		noAck: false,
 	});
 });

@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+
+  worker-management:
+    build: 
+      context: .
+      args:
+        - ENV=local
+      dockerfile: Dockerfile
+    container_name: worker-management
+    volumes:
+      - ./logs:/home/node/worker-mngt/logs
+      - ./src:/home/node/worker-mngt/src
+    environment:
+      SERVER_PORT: 3000
+
+      RBMQ_HOST: amqp://rabbitmq:5672
+      RBMQ_USER: guest
+      RBMQ_PASSWD: guest
+
+      UTOKEN: tobefilledhere
+      EXTERNAL_TOKEN: tobefilledhere
+      HTTP_URL: true.success.duc
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "true.success.duc:host-gateway"
+    networks:
+      - worker-rabbitmq

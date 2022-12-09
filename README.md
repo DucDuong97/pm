@@ -8,7 +8,7 @@ On development phase, it is recommended to build without docker.
 
 # How to build with docker
 ```
-docker-compose up --build -d
+docker compose -f docker-compose.yml -f dc.overlay.yml up -d --force-recreate --build
 ```
 
 # Connection test

@@ -1,6 +1,5 @@
 node_modules/
 test/
 logs/
-rabbitmq/
 package-lock.json
 .env

@@ -1,6 +1,6 @@
 
 
-const asyncAmqp = require('amqplib');
+const amqp = require('amqplib');
 
 const BASIC_RETRY_DELAY = process.env.BASIC_RETRY_DELAY || 1000;
 const MAX_RETRIES = process.env.MAX_RETRIES || 2;
@@ -19,11 +19,46 @@ class Queue {
 		this.exceed_key = async_params.exceed_key;
 	}
 
-	static async build(name, cb){
-		const conn =  await asyncAmqp.connect(process.env.AMQP_URL);
-		const channel = await conn.createChannel();
+	/**
+	 * @type {asyncAmqp.Connection}
+	 */
+	static _conn = null;
 
-		channel.prefetch(1);
+	/**
+	 * @type {asyncAmqp.Channel}
+	 */
+	static _chan = null;
+
+	static async initChannel(cb, fb){
+		await this._initChannel();
+		cb(this._chan);
+		this._conn.once('error', fb);
+		// this.destruct();
+	}
+
+	static destruct(){
+		this._chan.close();
+		this._conn.close();
+
+		this._chan = null;
+		this._conn = null;
+	}
+
+	static async _initChannel(){
+		if (this._chan){
+			return this._chan;
+		}
+
+		this._conn = await amqp.connect(process.env.RBMQ_HOST);
+		this._chan = await this._conn.createChannel();
+
+		this._chan.prefetch(1);
+
+		return this._chan;
+	}
+
+	static async build(name, cb){
+		const channel = await this._initChannel();
 
 		if (!name || name == ''){
 			console.log("Invalid queue name");
@@ -36,26 +71,42 @@ class Queue {
 			autoDelete: false,
 		});
 
-		await channel.assertExchange(RETRY_EX, 'direct', {
+		/**
+		 * build retry mechanism
+		 */
+		const {retry_key, dead_key, exceed_key} = this.initRetryMechanism(q.name);
+
+		cb(new Queue({
+
+			channel, 
+			
+			queue: q.queue,
+			
+			retry_key, dead_key, exceed_key,
+		}));
+	}
+
+	static async initRetryMechanism(queue_name){
+		await this._chan.assertExchange(RETRY_EX, 'direct', {
 			durable: true,
 			autoDelete: false,
 		});
-		await channel.assertExchange(REQUEUE_EX, 'direct', {
+		await this._chan.assertExchange(REQUEUE_EX, 'direct', {
 			durable: true,
 			autoDelete: false,
 		});
 
-		const retry_q = await channel.assertQueue(`${q.queue}.retry`, {
+		const retry_q = await channel.assertQueue(`${queue_name}.retry`, {
 			durable: true, autoDelete: false,
 			arguments: {
 				'x-dead-letter-exchange': REQUEUE_EX,
 			}
 		});
-		const exceed_q = await channel.assertQueue(`${q.queue}.retries.exceed`, {
+		const exceed_q = await channel.assertQueue(`${queue_name}.retries.exceed`, {
 			durable: true,
 			autoDelete: false
 		});
-		const dead_q = await channel.assertQueue(`${q.queue}.dead.letter`, {
+		const dead_q = await channel.assertQueue(`${queue_name}.dead.letter`, {
 			durable: true,
 			autoDelete: false
 		});
@@ -66,17 +117,11 @@ class Queue {
 		channel.bindQueue(dead_q.queue,   RETRY_EX, dead_q.queue);
 
 		channel.bindQueue(q.queue, REQUEUE_EX, retry_q.queue);
-
-		cb(new Queue({
-
-			channel, 
-			
-			queue: q.queue,
-			
+		return {
 			retry_key: retry_q.queue,
 			dead_key: dead_q.queue,
 			exceed_key: exceed_q.queue
-		}));
+		}
 	}
 
 	consume = async (cb) => {
