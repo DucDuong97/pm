@@ -10,20 +10,17 @@ class Pubsub extends Queue {
 	 * 
 	 * @param {String} topic 
 	 * @param {String} type 
-	 * @returns {asyncAmqp.Replies.AssertExchange}
+	 * @returns {Promise<asyncAmqp.Replies.AssertExchange>}
 	 */
 	static async initEntryEx(topic, type) {
-		this._initChannel();
+		await this._initChannel();
 
-		if (typeof type == 'undefined'){
-			type = 'fanout';
-		}
-		if (type == 'routing'){
+		if (type === 'routing'){
 			type = 'topic';
 		} else{
 			type = 'fanout';
 		}
-		return await this._chan.assertExchange(topic, type, {
+		return this._chan.assertExchange(topic, type, {
 			durable: true
 		});
 	}
@@ -47,7 +44,7 @@ class Pubsub extends Queue {
 			console.log("Invalid topic name");
 			process.exit();
 		}
-		this.topic = (await this.initEntryEx(channel, topic, type)).exchange;
+		this.topic = (await this.initEntryEx(topic, type)).exchange;
 
 		/**
 		 * init Temp Queue
@@ -61,10 +58,9 @@ class Pubsub extends Queue {
 		/**
 		 * retry mechanism
 		 */
-		const {retry_key, dead_key, exceed_key} = this.initRetryMechanism("pubsub");
+		const {retry_key, dead_key, exceed_key} = this.initRetryMechanism(q.queue, true);
 
 		cb(new Queue({
-
 			channel, 
 			
 			queue: q.queue,

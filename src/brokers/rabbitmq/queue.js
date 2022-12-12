@@ -29,10 +29,9 @@ class Queue {
 	 */
 	static _chan = null;
 
-	static async initChannel(cb, fb){
+	static async initChannel(cb){
 		await this._initChannel();
 		cb(this._chan);
-		this._conn.once('error', fb);
 		// this.destruct();
 	}
 
@@ -44,16 +43,38 @@ class Queue {
 		this._conn = null;
 	}
 
+	/**
+	 * @returns {asyncAmqp.Channel}
+	 */
 	static async _initChannel(){
 		if (this._chan){
+			console.log("Return cached Channel");
 			return this._chan;
 		}
+		console.log("Open new channel");
 
 		this._conn = await amqp.connect(process.env.RBMQ_HOST);
+		this._conn.on('error', (err) => {
+			console.log("Connection error");
+			console.log(err);
+		});
+		this._conn.on('close', (err) => {
+			console.log("Conneciton closed");
+			this._conn = null;
+		});
 		this._chan = await this._conn.createChannel();
+		this._chan.on('error', (err) => {
+			console.log("Channel error");
+			console.log(err);
+			this._chan = null;
+		});
+		this._chan.on('close', (err) => {
+			console.log("Channel closed");
+			this._chan = null;
+		});
 
 		this._chan.prefetch(1);
-
+		 
 		return this._chan;
 	}
 
@@ -74,7 +95,7 @@ class Queue {
 		/**
 		 * build retry mechanism
 		 */
-		const {retry_key, dead_key, exceed_key} = this.initRetryMechanism(q.name);
+		const {retry_key, dead_key, exceed_key} = await this.initRetryMechanism(q.queue);
 
 		cb(new Queue({
 
@@ -86,37 +107,41 @@ class Queue {
 		}));
 	}
 
-	static async initRetryMechanism(queue_name){
+	static async initRetryMechanism(queue_name, is_pubsub = false){
 		await this._chan.assertExchange(RETRY_EX, 'direct', {
 			durable: true,
 			autoDelete: false,
 		});
-		await this._chan.assertExchange(REQUEUE_EX, 'direct', {
+		const requeue_ex = await this._chan.assertExchange(REQUEUE_EX, 'direct', {
 			durable: true,
 			autoDelete: false,
 		});
 
-		const retry_q = await channel.assertQueue(`${queue_name}.retry`, {
-			durable: true, autoDelete: false,
+		const alias = is_pubsub ? "pubsub":queue_name;
+
+		const retry_q = await this._chan.assertQueue(`${alias}.retry`, {
+			durable: true,
 			arguments: {
 				'x-dead-letter-exchange': REQUEUE_EX,
+				'x-dead-letter-routing-key': queue_name,
 			}
 		});
-		const exceed_q = await channel.assertQueue(`${queue_name}.retries.exceed`, {
+		const exceed_q = await this._chan.assertQueue(`${alias}.retries.exceed`, {
 			durable: true,
 			autoDelete: false
 		});
-		const dead_q = await channel.assertQueue(`${queue_name}.dead.letter`, {
+		const dead_q = await this._chan.assertQueue(`${alias}.dead.letter`, {
 			durable: true,
 			autoDelete: false
 		});
 
 		// bind
-		channel.bindQueue(retry_q.queue,  RETRY_EX, retry_q.queue);
-		channel.bindQueue(exceed_q.queue, RETRY_EX, exceed_q.queue);
-		channel.bindQueue(dead_q.queue,   RETRY_EX, dead_q.queue);
+		this._chan.bindQueue(retry_q.queue,  RETRY_EX, retry_q.queue);
+		this._chan.bindQueue(exceed_q.queue, RETRY_EX, exceed_q.queue);
+		this._chan.bindQueue(dead_q.queue,   RETRY_EX, dead_q.queue);
 
-		channel.bindQueue(q.queue, REQUEUE_EX, retry_q.queue);
+		this._chan.bindQueue(queue_name, requeue_ex.exchange, queue_name);
+
 		return {
 			retry_key: retry_q.queue,
 			dead_key: dead_q.queue,
@@ -131,7 +156,7 @@ class Queue {
 			console.log(error);
 		});
 	
-		console.log(" [*] Waiting for video in %s", this.queue);
+		console.log("[*] Waiting for msg in queue: %s", this.queue);
 	
 		this.channel.consume(this.queue, async (msg) => {
 	
@@ -148,8 +173,8 @@ class Queue {
 	}
 
 	failure(msg){
-		console.log(" [x] Execution failed!!");
-		console.log(` [x] Message sent to '${this.dead_key}'!`);
+		console.log("[x] Execution failed!!");
+		console.log(`[x] Message sent to '${this.dead_key}'!`);
 
 		this.channel.publish(RETRY_EX, this.dead_key, Buffer.from(msg.content));
 	}
@@ -168,8 +193,8 @@ class Queue {
 		
 		if (retry_count < MAX_RETRIES){
 			// Retry mechanism
-			console.log(" [x] Retrying...");
-			console.log(` [x] Publishing to ${RETRY_EX}, routing key ${this.retry_key} with ${next_delay/1000}s delay`);
+			console.log("[x] Retrying...");
+			console.log(`[x] Publishing to ${RETRY_EX}, routing key ${this.retry_key} with ${next_delay/1000}s delay`);
 			
 			const msg_options = {
 				expiration: next_delay,
@@ -180,8 +205,8 @@ class Queue {
 			this.channel.publish(RETRY_EX, this.retry_key, Buffer.from(msg.content), msg_options);
 		} else {
 			// send to retries exceed queue
-			console.log(` [x] Retry times exceeds`)
-			console.log(` [x] Retry exceed limit (${MAX_RETRIES}). Message sent to '${this.exceed_key}'!`);
+			console.log(`[x] Retry times exceeds`)
+			console.log(`[x] Retry exceed limit (${MAX_RETRIES}). Message sent to '${this.exceed_key}'!`);
 			
 			this.channel.publish(RETRY_EX, this.exceed_key, Buffer.from(msg.content));
 		}

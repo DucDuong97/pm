@@ -11,7 +11,7 @@ require('dotenv').config();
 /**
  * Load ROOT DIR
  */
-const root = require("app-root-path");
+const root = require("app-root-path") + "/src";
 
 /**
  * Handle input arguments
@@ -33,7 +33,7 @@ const Pubsub = require(`${root}/brokers/rabbitmq/pubsub`);
 Pubsub.build(topic, topic_type, (queue_utils) => {
 
 	console.log('Listen from topic:', topic);
-	console.log("[*] Waiting for messages in %s. To exit press CTRL+C", topic);
+	console.log("[*] Waiting for messages in worker: %s. To exit press CTRL+C", worker);
 
 	/**
 	 * Graceful shutdown
@@ -59,8 +59,8 @@ Pubsub.build(topic, topic_type, (queue_utils) => {
 				worker: worker,
 				msg: msg.content.toString(),
 			},
-			(data) => dataOutput(data, queue),
-			(data) => errorOutput(data, queue),
+			(data) => dataOutput(data, worker),
+			(data) => errorOutput(data, worker),
 			() => queue_utils.success(msg),
 			() => queue_utils.failure(msg),
 			() => queue_utils.retry(msg),

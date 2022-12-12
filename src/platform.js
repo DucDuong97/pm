@@ -12,7 +12,7 @@ exports.app_worker_config = (app_name, worker_name, amount, type, mode, topic) =
     var mode_ext = 'basic';
 
     if (mode == 'http'){
-        mode_ext = 'http'
+        mode_ext = 'app'
     }
 
     return {
@@ -26,6 +26,9 @@ exports.app_worker_config = (app_name, worker_name, amount, type, mode, topic) =
     };
 };
 
+/**
+ * @deprecated
+ */
 exports.ip_worker_config = (app_name, worker_name, amount, type, mode, address, hostname, topic) => {
 
     if (type == 'pubsub'){

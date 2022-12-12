@@ -11,7 +11,7 @@ require('dotenv').config();
 /**
  * Load ROOT DIR
  */
-const root = require("app-root-path");
+const root = require("app-root-path") + "/src";
 
 /**
  * Handle input arguments
@@ -31,7 +31,7 @@ const Queue = require(`${root}/brokers/rabbitmq/queue`);
 Queue.build(queue, (queue_utils) => {
 
 	console.log('Listen from worker:', worker);
-	console.log(`[*] Waiting for messages from ${queue}. To exit press CTRL+C"`);
+	console.log(`[*] Waiting for messages from ${queue}. To exit press CTRL+C`);
 
 	/**
 	 * Graceful shutdown

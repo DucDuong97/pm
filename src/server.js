@@ -106,6 +106,9 @@ app.post("/start-worker", (req, res) => {
 	}
 });
 
+/**
+ * @deprecated
+ */
 app.post("/restart-worker", (req, res) => {
 
 	let worker   = req.body.worker_name;
@@ -138,7 +141,6 @@ app.get("/worker-logs/:worker_name", (req, res) => {
 		'logs', '--lines', '100', '--nostream', worker
 	]);
     child.stdout.on('data', (data) => {
-        console.log(`Get logs...`);
         result += data;
     });
     child.stderr.on('data', (data) => {
@@ -146,8 +148,6 @@ app.get("/worker-logs/:worker_name", (req, res) => {
         console.log(data);
     });
 	child.on('exit', function (code, signal) {
-        console.log('Exit: child process exited with ' +
-                `code ${code} and signal ${signal}`);
         
         // if exit code == 0 (means script ends without errors) ack
         if (code == 0){
@@ -158,6 +158,8 @@ app.get("/worker-logs/:worker_name", (req, res) => {
 			});
 			return;
         }
+        console.log('Exit: child process exited with ' +
+                `code ${code} and signal ${signal}`);
 		res.json({
 			success: false,
 		});
@@ -205,19 +207,28 @@ app.post("/delete-worker", (req, res) => {
 	});
 });
 
-app.post("/create-topic", (req, res) => {
+/**
+ * @Deprecated
+ */
+app.post("/create-topic", async (req, res) => {
 	console.log("Creating topic...");
 
 	let app   = req.body.app_name;
 	let topic = req.body.topic_name;
 	let type  = req.body.topic_type;
 
+	console.log("type:", type);
+
 	let result = {};
-	Pubsub.initEntryEx(`topic.${app}.${topic}`, type);
+	await Pubsub.initEntryEx(`topic.${app}.${topic}`, type);
 	result.success = true;
 	res.json(result);
 });
 
+
+/**
+ * @Deprecated
+ */
 app.post("/delete-topic", (req, res) => {
 	console.log("Deleting topic...");
 
@@ -239,10 +250,10 @@ app.get("/describe-worker/:worker_name", (req, res) => {
 
 	ProcessManager.getWorkerData(req.params.worker_name, (err, worker) => {
 		if (err) {
-			result.found = false;
+			result.ok = false;
 			result.err_msg = err;
 		} else {
-			result.found = true;
+			result.ok = true;
 			result.amount = worker.length;
 			result.worker = worker;
 		}
@@ -254,18 +265,20 @@ app.get("/describe-topic/:topic_name", (req, res) => {
 	console.log(`Describe topic: ${req.params.topic_name} ...`);
 
 	let result = {};
+	let sended = false;
 
 	Pubsub.initChannel(async (channel) => {
-		try {
-			await channel.checkExchange(req.params.topic_name);
-			result.success = true;
-			res.json(result);
-		} catch(_){
-
-		}
-	}, (err) => {
-		result.success = false;
-		result.err_msg = err;
+		process.on('unhandledRejection', (p, e) => {
+			if (!sended){
+				console.log('exchange not exist');
+				result.success = false;
+				res.json(result);
+				sended = true;
+			}
+		});
+		await channel.checkExchange(req.params.topic_name);
+		console.log('exchange exist');
+		result.success = true;
 		res.json(result);
 	});
 });
