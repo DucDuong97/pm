@@ -13,3 +13,5 @@ docker compose -f docker-compose.yml -f dc.overlay.yml up -d --force-recreate --
 
 # Connection test
 localhost:3000/ping
+
+# Create a vhost

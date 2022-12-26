@@ -33,9 +33,9 @@ class Pubsub extends Queue {
 		this._chan.deleteExchange(topic, cb);
 	}
 	
-	static async build(topic, type, cb){
+	static async build(vhost, worker, topic, type, cb){
 
-		const channel = await this._initChannel();
+		const channel = await this._initChannel(vhost);
 
 		/**
 		 * init Topic
@@ -46,19 +46,18 @@ class Pubsub extends Queue {
 		}
 		this.topic = (await this.initEntryEx(topic, type)).exchange;
 
-		/**
-		 * init Temp Queue
-		 */
-		const q = await channel.assertQueue('', {
+		
+		const queue = `pubsub.${worker}`;
+		const q = await channel.assertQueue(queue, {
 			durable: true,
-			exclusive: true,
+			autoDelete: false,
 		});
 		channel.bindQueue(q.queue, this.topic, '');
 
 		/**
 		 * retry mechanism
 		 */
-		const {retry_key, dead_key, exceed_key} = this.initRetryMechanism(q.queue, true);
+		const {retry_key, dead_key, exceed_key} = this.initRetryMechanism(q.queue);
 
 		cb(new Queue({
 			channel, 

@@ -20,7 +20,7 @@ var args = process.argv.slice(2);
 
 const app = args[0];
 const worker = args[1];
-const queue = `worker.${app}.${worker}`;
+const queue = `worker.${worker}`;
 
 /**
  * Consumer
@@ -28,7 +28,7 @@ const queue = `worker.${app}.${worker}`;
 const { errorOutput, dataOutput } = require(`${root}/utils/output`)
 const Queue = require(`${root}/brokers/rabbitmq/queue`);
 
-Queue.build(queue, (queue_utils) => {
+Queue.build(app, queue, (queue_utils) => {
 
 	console.log('Listen from worker:', worker);
 	console.log(`[*] Waiting for messages from ${queue}. To exit press CTRL+C`);

@@ -46,14 +46,14 @@ class Queue {
 	/**
 	 * @returns {asyncAmqp.Channel}
 	 */
-	static async _initChannel(){
+	static async _initChannel(vhost = ''){
 		if (this._chan){
 			console.log("Return cached Channel");
 			return this._chan;
 		}
 		console.log("Open new channel");
 
-		this._conn = await amqp.connect(process.env.RBMQ_HOST);
+		this._conn = await amqp.connect(`amqp://${process.env.RBMQ_HOST}:${process.env.RBMQ_PORT}/${vhost}`);
 		this._conn.on('error', (err) => {
 			console.log("Connection error");
 			console.log(err);
@@ -78,8 +78,8 @@ class Queue {
 		return this._chan;
 	}
 
-	static async build(name, cb){
-		const channel = await this._initChannel();
+	static async build(vhost, name, cb){
+		const channel = await this._initChannel(vhost);
 
 		if (!name || name == ''){
 			console.log("Invalid queue name");

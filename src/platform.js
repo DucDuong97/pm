@@ -1,6 +1,4 @@
 
-require('dotenv').config({path:`${__dirname}/.env${process.env.NODE_ENV == 'development' ? '':'.local'}`});
-
 exports.app_worker_config = (app_name, worker_name, amount, type, mode, topic) => {
 
     if (type == 'pubsub'){

@@ -30,7 +30,7 @@ const { errorOutput, dataOutput } = require(`${root}/utils/output`)
 
 const Pubsub = require(`${root}/brokers/rabbitmq/pubsub`);
 
-Pubsub.build(topic, topic_type, (queue_utils) => {
+Pubsub.build(app, worker, topic, topic_type, (queue_utils) => {
 
 	console.log('Listen from topic:', topic);
 	console.log("[*] Waiting for messages in worker: %s. To exit press CTRL+C", worker);
