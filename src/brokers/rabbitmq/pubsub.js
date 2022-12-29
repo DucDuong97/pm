@@ -53,13 +53,17 @@ class Pubsub extends Queue {
 			password: process.env.RBMQ_PASSWD,
 		});
 
-		broker_client.createUpstream({
-			upstream: topic.split(".")[1],
-			exchange: topic,
-			vhost: vhost,
-		},() => {
-			console.log("Federate successful");
-		});
+		const upstream = topic.split(".")[1];
+
+		if (upstream !== vhost){
+			broker_client.createUpstream({
+				upstream: upstream,
+				exchange: topic,
+				vhost: vhost,
+			},() => {
+				console.log("Federate successful");
+			});
+		}
 		
 		const queue = `pubsub.${worker}`;
 		const q = await channel.assertQueue(queue, {
