@@ -65,6 +65,47 @@ Client.prototype.setClusterName = function(body, _cb) {
 }
 
 
+/* Federation methods */
+Client.prototype.createUpstream = function(body, _cb) {
+	if (!body || !body.vhost) {
+		_cb({
+			message : 'Vhost not provided'
+		})
+		return
+	}
+	if (!body.upstream) {
+		_cb({
+			message : 'Upstream name not provided'
+		})
+		return
+	}
+	if (!body.exchange) {
+		_cb({
+			message : 'Exchange not provided'
+		})
+		return
+	}
+	var put_body = {
+		value:{
+			uri : `amqp://${process.env.RBMQ_USER}:${process.env.RBMQ_PASSWD}@${process.env.RBMQ_HOST}/${body.upstream}`,
+		}
+	}
+	var path = '/api/parameters/federation-upstream/' + encodeURIComponent(body.vhost) + '/' + encodeURIComponent(body.exchange) + "-downstream";
+	var that = this;
+	this.putClient.makeRequest(path, put_body, function(e){
+		console.log(e);
+		console.log("Create upstream successful");
+		var put_body = {
+			pattern : `^${body.exchange}$`,
+			definition: {"federation-upstream-set": "all"},
+			"apply-to": "exchanges",
+		}
+		var path = '/api/policies/' + encodeURIComponent(body.vhost) + '/' + encodeURIComponent(body.exchange) + "-downstream";
+		that.putClient.makeRequest(path, put_body, _cb)
+	})
+}
+
+
 /* Nodes methods */
 Client.prototype.listNodes = function(_cb) {
 	var path = '/api/nodes'

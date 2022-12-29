@@ -46,6 +46,20 @@ class Pubsub extends Queue {
 		}
 		this.topic = (await this.initEntryEx(topic, type)).exchange;
 
+		const broker_client = require(`./manager`).client({
+			host: process.env.RBMQ_HOST,
+			port: `1${process.env.RBMQ_PORT}`,
+			user: process.env.RBMQ_USER,
+			password: process.env.RBMQ_PASSWD,
+		});
+
+		broker_client.createUpstream({
+			upstream: topic.split(".")[1],
+			exchange: topic,
+			vhost: vhost,
+		},() => {
+			console.log("Federate successful");
+		});
 		
 		const queue = `pubsub.${worker}`;
 		const q = await channel.assertQueue(queue, {
@@ -57,7 +71,7 @@ class Pubsub extends Queue {
 		/**
 		 * retry mechanism
 		 */
-		const {retry_key, dead_key, exceed_key} = this.initRetryMechanism(q.queue);
+		const {retry_key, dead_key, exceed_key} = await this.initRetryMechanism(q.queue);
 
 		cb(new Queue({
 			channel, 

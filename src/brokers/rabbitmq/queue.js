@@ -159,9 +159,7 @@ class Queue {
 		console.log("[*] Waiting for msg in queue: %s", this.queue);
 	
 		this.channel.consume(this.queue, async (msg) => {
-	
 			await cb(msg);
-			this.channel.ack(msg);
 		}, {
 			// manual acknowledgment mode
 			noAck: false
@@ -170,6 +168,7 @@ class Queue {
 
 	success(msg){
 		console.log(" [x] Done");
+		this.channel.ack(msg);
 	}
 
 	failure(msg){
