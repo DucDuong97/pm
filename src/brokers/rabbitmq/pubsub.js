@@ -46,12 +46,7 @@ class Pubsub extends Queue {
 		}
 		this.topic = (await this.initEntryEx(topic, type)).exchange;
 
-		const broker_client = require(`./manager`).client({
-			host: process.env.RBMQ_HOST,
-			port: `1${process.env.RBMQ_PORT}`,
-			user: process.env.RBMQ_USER,
-			password: process.env.RBMQ_PASSWD,
-		});
+		const broker_client = require(`./manager`).client(vhost);
 
 		const upstream = topic.split(".")[1];
 

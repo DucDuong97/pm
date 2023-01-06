@@ -13,8 +13,13 @@ const formUrlencoded = require('form-urlencoded').default
  *   })
  **/
 
-exports.client = function(config) {
-	config = config || {}
+exports.client = function(vhost) {
+	config = {
+		host: process.env.RBMQ_HOST,
+		port: `1${process.env.RBMQ_PORT}`,
+		user: process.env.RBMQ_USER,
+		password: process.env.RBMQ_PASSWD,
+	}
 	return new Client(config)
 }
 

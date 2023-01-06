@@ -23,15 +23,15 @@ app.use("/worker", require("./routes/worker"));
 app.use("/topic", require("./routes/topic"));
 // app.use("/app", require("./routes/app"));
 
-app.get("/describe-queue/:queue_name", (req, res) => {
-	console.log("Describe queue: " + req.params.queue_name);
+app.get("/queue/:app/:queue", (req, res) => {
+	console.log("Describe queue " + req.params.queue + " in app " + req.params.app);
 
-	const AMQPStats = require('amqp-stats');
-	var stats = new AMQPStats({
-		hostname: "localhost:15672",  // default: localhost:55672
-	});
+	const broker_client = require(`./brokers/rabbitmq/manager`).client(req.params.app);
 
-	stats.getQueue('/', req.params.queue_name, (err, _, data) => {
+	broker_client.getQueue({
+		vhost:req.params.app,
+		queue:req.params.queue,
+	}, (err, data) => {
 		let result = {};
 
 		if (err) {
